@@ -169,6 +169,54 @@ Content-Type: application/json
 }
 ```
 
+### Dashboard Data
+
+```http
+GET /api/daily-summary-operation/dashboard?start_date=2026-04-01&end_date=2026-05-17
+```
+
+Response shape:
+
+```json
+{
+  "success": true,
+  "message": "Dashboard data fetched successfully",
+  "data": {
+    "records": [
+      {
+        "summary_date": "2026-04-01",
+        "deposit": 500,
+        "withdrawal": 160,
+        "net_deposit": 340,
+        "registered": 42,
+        "promotion": 0,
+        "ggr": 340
+      }
+    ],
+    "summary": {
+      "total_deposit": 123456,
+      "total_withdrawal": 100000,
+      "total_net_deposit": 23456,
+      "total_registered": 5000,
+      "total_promotion": 15000,
+      "total_ggr": 8456,
+      "average_daily_deposit": 5000,
+      "average_daily_withdrawal": 4000,
+      "average_daily_ggr": 800,
+      "total_days": 47,
+      "best_ggr_day": {
+        "summary_date": "2026-05-06",
+        "ggr": 271153.26
+      },
+      "worst_ggr_day": {
+        "summary_date": "2026-05-08",
+        "ggr": -2077179.25
+      }
+    }
+  }
+}
+```
+
 ### Dashboard Summary
 
 ```http
@@ -201,6 +249,66 @@ Response shape:
       "ggr": -2077179.25
     }
   }
+}
+```
+
+### Player Behaviour And Liquidity
+
+Returns chart-ready daily liquidity records with withdrawal ratio as a percentage:
+
+```text
+withdrawal_ratio = withdrawal / deposit * 100
+```
+
+When `deposit` is `0`, `withdrawal_ratio` is returned as `0`.
+
+```http
+GET /api/daily-summary-operation/player-behaviour-liquidity?start_date=2026-04-01&end_date=2026-05-17
+```
+
+Response shape:
+
+```json
+{
+  "success": true,
+  "message": "Player behaviour and liquidity data fetched successfully",
+  "data": [
+    {
+      "date": "2026-04-26",
+      "deposit": 436627,
+      "withdrawal": 727856,
+      "withdrawal_ratio": 166.7
+    }
+  ]
+}
+```
+
+### Cumulative Monthly Trajectory
+
+Returns chart-ready running totals over the requested date range. Cumulative net revenue after promotions uses `ggr`, which is computed as `net_deposit - promotion`.
+
+```http
+GET /api/daily-summary-operation/cumulative-monthly-trajectory?start_date=2026-04-01&end_date=2026-05-17
+```
+
+Response shape:
+
+```json
+{
+  "success": true,
+  "message": "Cumulative monthly trajectory data fetched successfully",
+  "data": [
+    {
+      "date": "2026-04-01",
+      "cumulative_net_revenue_after_promotions": 340,
+      "cumulative_net_deposit": 340
+    },
+    {
+      "date": "2026-04-02",
+      "cumulative_net_revenue_after_promotions": -160,
+      "cumulative_net_deposit": -160
+    }
+  ]
 }
 ```
 

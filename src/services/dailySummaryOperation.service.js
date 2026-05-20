@@ -204,11 +204,81 @@ const getDashboardSummary = async (filters = {}) => {
   };
 };
 
+const getPlayerBehaviourLiquidity = async (filters = {}) => {
+  const { whereClause, params } = buildDateRangeWhere(filters);
+  const [rows] = await pool.execute(
+    `
+      SELECT
+        summary_date AS date,
+        deposit,
+        withdrawal,
+        ROUND(
+          CASE
+            WHEN deposit > 0 THEN (withdrawal / deposit) * 100
+            ELSE 0
+          END,
+          2
+        ) AS withdrawal_ratio
+      FROM daily_summary_operation
+      ${whereClause}
+      ORDER BY summary_date ASC
+    `,
+    params
+  );
+
+  return rows;
+};
+
+const getCumulativeMonthlyTrajectory = async (filters = {}) => {
+  const { whereClause, params } = buildDateRangeWhere(filters);
+  const [rows] = await pool.execute(
+    `
+      SELECT
+        summary_date AS date,
+        ROUND(
+          SUM(ggr) OVER (
+            ORDER BY summary_date ASC
+            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+          ),
+          2
+        ) AS cumulative_net_revenue_after_promotions,
+        ROUND(
+          SUM(net_deposit) OVER (
+            ORDER BY summary_date ASC
+            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+          ),
+          2
+        ) AS cumulative_net_deposit
+      FROM daily_summary_operation
+      ${whereClause}
+      ORDER BY summary_date ASC
+    `,
+    params
+  );
+
+  return rows;
+};
+
+const getDashboardData = async (filters = {}) => {
+  const [records, summary] = await Promise.all([
+    findAll(filters),
+    getDashboardSummary(filters)
+  ]);
+
+  return {
+    records,
+    summary
+  };
+};
+
 module.exports = {
   findAll,
   findByDate,
   save,
   saveBulk,
   getDashboardSummary,
+  getPlayerBehaviourLiquidity,
+  getCumulativeMonthlyTrajectory,
+  getDashboardData,
   normalizeRecord
 };

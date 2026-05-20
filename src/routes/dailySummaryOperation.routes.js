@@ -16,9 +16,27 @@ router.get(
 );
 
 router.get(
+  '/dashboard',
+  validateDateRange,
+  dailySummaryOperationController.getDashboardData
+);
+
+router.get(
   '/dashboard/summary',
   validateDateRange,
   dailySummaryOperationController.getDashboardSummary
+);
+
+router.get(
+  '/player-behaviour-liquidity',
+  validateDateRange,
+  dailySummaryOperationController.getPlayerBehaviourLiquidity
+);
+
+router.get(
+  '/cumulative-monthly-trajectory',
+  validateDateRange,
+  dailySummaryOperationController.getCumulativeMonthlyTrajectory
 );
 
 router.get(

@@ -80,10 +80,64 @@ const getDashboardSummary = async (req, res, next) => {
   }
 };
 
+const getPlayerBehaviourLiquidity = async (req, res, next) => {
+  try {
+    const records = await dailySummaryOperationService.getPlayerBehaviourLiquidity({
+      start_date: req.query.start_date,
+      end_date: req.query.end_date
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Player behaviour and liquidity data fetched successfully',
+      data: records
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const getCumulativeMonthlyTrajectory = async (req, res, next) => {
+  try {
+    const records = await dailySummaryOperationService.getCumulativeMonthlyTrajectory({
+      start_date: req.query.start_date,
+      end_date: req.query.end_date
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Cumulative monthly trajectory data fetched successfully',
+      data: records
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const getDashboardData = async (req, res, next) => {
+  try {
+    const dashboardData = await dailySummaryOperationService.getDashboardData({
+      start_date: req.query.start_date,
+      end_date: req.query.end_date
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Dashboard data fetched successfully',
+      data: dashboardData
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 module.exports = {
   getAllDailySummaryRecords,
   getDailySummaryRecordByDate,
   saveDailySummaryRecord,
   saveBulkDailySummaryRecords,
-  getDashboardSummary
+  getDashboardSummary,
+  getPlayerBehaviourLiquidity,
+  getCumulativeMonthlyTrajectory,
+  getDashboardData
 };
