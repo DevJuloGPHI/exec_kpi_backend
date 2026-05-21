@@ -40,6 +40,18 @@ router.get(
 );
 
 router.get(
+  '/dailyroiAnalysis',
+  validateDateRange,
+  dailySummaryOperationController.getDailyPromoRoiAnalysis
+);
+
+router.get(
+  '/ggr-summary-report',
+  validateDateRange,
+  dailySummaryOperationController.getGgrSummaryReport
+);
+
+router.get(
   '/:summary_date',
   validateSummaryDateParam,
   dailySummaryOperationController.getDailySummaryRecordByDate

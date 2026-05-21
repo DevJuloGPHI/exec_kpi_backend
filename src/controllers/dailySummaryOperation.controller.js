@@ -36,6 +36,40 @@ const getDailySummaryRecordByDate = async (req, res, next) => {
   }
 };
 
+const getDailyPromoRoiAnalysis = async (req, res, next) => {
+  try {
+    const records = await dailySummaryOperationService.getDailyPromoRoiAnalysis({
+      start_date: req.query.start_date,
+      end_date: req.query.end_date
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Daily promo ROI analysis data fetched successfully',
+      data: records
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const getGgrSummaryReport = async (req, res, next) => {
+  try {
+    const report = await dailySummaryOperationService.getGgrSummaryReport({
+      start_date: req.query.start_date,
+      end_date: req.query.end_date
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'GGR summary report fetched successfully',
+      data: report
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 const saveDailySummaryRecord = async (req, res, next) => {
   try {
     await dailySummaryOperationService.save(req.body);
@@ -134,6 +168,8 @@ const getDashboardData = async (req, res, next) => {
 module.exports = {
   getAllDailySummaryRecords,
   getDailySummaryRecordByDate,
+  getDailyPromoRoiAnalysis,
+  getGgrSummaryReport,
   saveDailySummaryRecord,
   saveBulkDailySummaryRecords,
   getDashboardSummary,

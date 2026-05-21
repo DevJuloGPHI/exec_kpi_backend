@@ -11,9 +11,14 @@ const startServer = async () => {
     const connection = await pool.getConnection();
     connection.release();
 
-    app.listen(PORT, () => {
+    // app.listen(PORT, () => {
+    //   console.log(`Executive Dashboard API is running on port ${PORT}`);
+    // });
+
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`Executive Dashboard API is running on port ${PORT}`);
     });
+
   } catch (error) {
     console.error('Failed to start server:', error.message);
     process.exit(1);

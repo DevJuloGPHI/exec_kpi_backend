@@ -116,6 +116,81 @@ Response:
 GET /api/daily-summary-operation?start_date=2026-04-01&end_date=2026-05-17
 ```
 
+### Daily ROI Analysis
+
+Returns the chart-ready daily series for promotional ROI analysis.
+
+```http
+GET /api/daily-summary-operation/dailyroiAnalysis?start_date=2026-04-01&end_date=2026-05-09
+```
+
+Response shape:
+
+```json
+{
+  "success": true,
+  "message": "Daily promo ROI analysis data fetched successfully",
+  "data": [
+    {
+      "date": "2026-04-01",
+      "promotion": 0,
+      "registered": 42,
+      "ggr": 340
+    }
+  ]
+}
+```
+
+### GGR Summary Report
+
+Returns dashboard card data from `ggr_daily_platform_metrics`, including weekly net GGR, total bets, total payouts, and best/worst platform by GGR.
+
+```http
+GET /api/daily-summary-operation/ggr-summary-report?start_date=2026-05-03&end_date=2026-05-09
+```
+
+Response shape:
+
+```json
+{
+  "success": true,
+  "message": "GGR summary report fetched successfully",
+  "data": {
+    "period": {
+      "start_date": "2026-05-03",
+      "end_date": "2026-05-09",
+      "total_days": 7
+    },
+    "weekly_net_ggr": -4878033.59,
+    "total_bets": 31561262.24,
+    "total_payouts": 36439295.83,
+    "total_pagcor_share": -731705.0385,
+    "total_audit_fee": -73170.5037,
+    "best_performing_platform": {
+      "platform_id": 3,
+      "platform_code": "EGAMES",
+      "platform_name": "E-Games",
+      "ggr": 176010.21,
+      "total_bets": 5705699.16,
+      "total_payouts": 5529688.95,
+      "pagcor_share": 26401.5315,
+      "audit_fee": 2640.1533
+    },
+    "worst_performing_platform": {
+      "platform_id": 1,
+      "platform_code": "SPORTSBOOK",
+      "platform_name": "Sportsbook",
+      "ggr": -5054114.8,
+      "total_bets": 25855466.08,
+      "total_payouts": 30909580.88,
+      "pagcor_share": -758117.22,
+      "audit_fee": -75811.722
+    },
+    "platform_breakdown": []
+  }
+}
+```
+
 ### Get One Record By Date
 
 ```http

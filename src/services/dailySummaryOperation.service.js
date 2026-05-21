@@ -11,6 +11,7 @@ const DAILY_SUMMARY_COLUMNS = `
 `;
 
 const roundMoney = (value) => Number(Number(value).toFixed(2));
+const roundDecimal = (value, precision) => Number(Number(value).toFixed(precision));
 
 const normalizeRecord = (record) => {
   const deposit = Number(record.deposit);
@@ -46,18 +47,18 @@ const upsertSql = `
     updated_at = CURRENT_TIMESTAMP
 `;
 
-const buildDateRangeWhere = ({ start_date, end_date } = {}) => {
+const buildDateRangeWhere = ({ start_date, end_date } = {}, dateColumn = 'summary_date') => {
   const conditions = [];
   const params = [];
 
   // Only static SQL fragments are added here; user-supplied dates always go through parameters.
   if (start_date) {
-    conditions.push('summary_date >= ?');
+    conditions.push(`${dateColumn} >= ?`);
     params.push(start_date);
   }
 
   if (end_date) {
-    conditions.push('summary_date <= ?');
+    conditions.push(`${dateColumn} <= ?`);
     params.push(end_date);
   }
 
@@ -94,6 +95,99 @@ const findByDate = async (summaryDate) => {
   );
 
   return rows[0] || null;
+};
+
+const getDailyPromoRoiAnalysis = async (filters = {}) => {
+  const { whereClause, params } = buildDateRangeWhere(filters);
+  const [rows] = await pool.execute(
+    `
+      SELECT
+        summary_date AS date,
+        promotion,
+        registered,
+        ggr
+      FROM daily_summary_operation
+      ${whereClause}
+      ORDER BY summary_date ASC
+    `,
+    params
+  );
+
+  return rows.map((row) => ({
+    date: row.date,
+    promotion: roundMoney(row.promotion),
+    registered: Number(row.registered),
+    ggr: roundMoney(row.ggr)
+  }));
+};
+
+const getGgrSummaryReport = async (filters = {}) => {
+  const { whereClause, params } = buildDateRangeWhere(filters, 'm.report_date');
+
+  const [summaryRows] = await pool.execute(
+    `
+      SELECT
+        COALESCE(SUM(m.ggr), 0) AS weekly_net_ggr,
+        COALESCE(SUM(m.total_bet_amount), 0) AS total_bets,
+        COALESCE(SUM(m.total_payout_amount), 0) AS total_payouts,
+        COALESCE(SUM(m.pagcor_share), 0) AS total_pagcor_share,
+        COALESCE(SUM(m.audit_fee), 0) AS total_audit_fee,
+        MIN(m.report_date) AS start_date,
+        MAX(m.report_date) AS end_date,
+        COUNT(DISTINCT m.report_date) AS total_days
+      FROM ggr_daily_platform_metrics m
+      ${whereClause}
+    `,
+    params
+  );
+
+  const [platformRows] = await pool.execute(
+    `
+      SELECT
+        m.platform_id,
+        p.platform_code,
+        p.platform_name,
+        COALESCE(SUM(m.ggr), 0) AS ggr,
+        COALESCE(SUM(m.total_bet_amount), 0) AS total_bets,
+        COALESCE(SUM(m.total_payout_amount), 0) AS total_payouts,
+        COALESCE(SUM(m.pagcor_share), 0) AS pagcor_share,
+        COALESCE(SUM(m.audit_fee), 0) AS audit_fee
+      FROM ggr_daily_platform_metrics m
+      INNER JOIN platforms p ON p.id = m.platform_id
+      ${whereClause}
+      GROUP BY m.platform_id, p.platform_code, p.platform_name
+      ORDER BY ggr DESC, p.platform_name ASC
+    `,
+    params
+  );
+
+  const summary = summaryRows[0];
+  const normalizedPlatforms = platformRows.map((row) => ({
+    platform_id: Number(row.platform_id),
+    platform_code: row.platform_code,
+    platform_name: row.platform_name,
+    ggr: roundMoney(row.ggr),
+    total_bets: roundMoney(row.total_bets),
+    total_payouts: roundMoney(row.total_payouts),
+    pagcor_share: roundDecimal(row.pagcor_share, 4),
+    audit_fee: roundDecimal(row.audit_fee, 4)
+  }));
+
+  return {
+    period: {
+      start_date: summary.start_date,
+      end_date: summary.end_date,
+      total_days: Number(summary.total_days)
+    },
+    weekly_net_ggr: roundMoney(summary.weekly_net_ggr),
+    total_bets: roundMoney(summary.total_bets),
+    total_payouts: roundMoney(summary.total_payouts),
+    total_pagcor_share: roundDecimal(summary.total_pagcor_share, 4),
+    total_audit_fee: roundDecimal(summary.total_audit_fee, 4),
+    best_performing_platform: normalizedPlatforms[0] || null,
+    worst_performing_platform: normalizedPlatforms[normalizedPlatforms.length - 1] || null,
+    platform_breakdown: normalizedPlatforms
+  };
 };
 
 const save = async (record) => {
@@ -274,6 +368,8 @@ const getDashboardData = async (filters = {}) => {
 module.exports = {
   findAll,
   findByDate,
+  getDailyPromoRoiAnalysis,
+  getGgrSummaryReport,
   save,
   saveBulk,
   getDashboardSummary,
