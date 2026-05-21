@@ -52,6 +52,12 @@ router.get(
 );
 
 router.get(
+  '/cumulative-ggr-waterfall-report',
+  validateDateRange,
+  dailySummaryOperationController.getCumulativeGgrWaterfallReport
+);
+
+router.get(
   '/:summary_date',
   validateSummaryDateParam,
   dailySummaryOperationController.getDailySummaryRecordByDate

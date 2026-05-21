@@ -70,6 +70,23 @@ const getGgrSummaryReport = async (req, res, next) => {
   }
 };
 
+const getCumulativeGgrWaterfallReport = async (req, res, next) => {
+  try {
+    const report = await dailySummaryOperationService.getCumulativeGgrWaterfallReport({
+      start_date: req.query.start_date,
+      end_date: req.query.end_date
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Cumulative GGR waterfall report fetched successfully',
+      data: report
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 const saveDailySummaryRecord = async (req, res, next) => {
   try {
     await dailySummaryOperationService.save(req.body);
@@ -170,6 +187,7 @@ module.exports = {
   getDailySummaryRecordByDate,
   getDailyPromoRoiAnalysis,
   getGgrSummaryReport,
+  getCumulativeGgrWaterfallReport,
   saveDailySummaryRecord,
   saveBulkDailySummaryRecords,
   getDashboardSummary,

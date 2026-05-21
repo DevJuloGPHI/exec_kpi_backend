@@ -190,6 +190,104 @@ const getGgrSummaryReport = async (filters = {}) => {
   };
 };
 
+const getCumulativeGgrWaterfallReport = async (filters = {}) => {
+  const { whereClause, params } = buildDateRangeWhere(filters, 'report_date');
+  const [rows] = await pool.execute(
+    `
+      SELECT
+        daily.date,
+        daily.daily_ggr,
+        daily.total_bets,
+        daily.total_payouts,
+        SUM(daily.daily_ggr) OVER (
+          ORDER BY daily.date ASC
+          ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+        ) AS cumulative_ggr
+      FROM (
+        SELECT
+          report_date AS date,
+          COALESCE(SUM(ggr), 0) AS daily_ggr,
+          COALESCE(SUM(total_bet_amount), 0) AS total_bets,
+          COALESCE(SUM(total_payout_amount), 0) AS total_payouts
+        FROM ggr_daily_platform_metrics
+        ${whereClause}
+        GROUP BY report_date
+      ) daily
+      ORDER BY daily.date ASC
+    `,
+    params
+  );
+
+  let previousCumulative = 0;
+  const dailyPoints = rows.map((row) => {
+    const dailyGgr = roundMoney(row.daily_ggr);
+    const cumulativeGgr = roundMoney(row.cumulative_ggr);
+    const waterfallStart = roundMoney(previousCumulative);
+    const waterfallEnd = cumulativeGgr;
+    previousCumulative = cumulativeGgr;
+
+    return {
+      date: row.date,
+      daily_ggr: dailyGgr,
+      cumulative_ggr: cumulativeGgr,
+      total_bets: roundMoney(row.total_bets),
+      total_payouts: roundMoney(row.total_payouts),
+      waterfall_start: waterfallStart,
+      waterfall_end: waterfallEnd,
+      direction: dailyGgr >= 0 ? 'positive' : 'negative'
+    };
+  });
+
+  const totals = dailyPoints.reduce(
+    (accumulator, row) => ({
+      weekly_net_ggr: accumulator.weekly_net_ggr + row.daily_ggr,
+      total_bets: accumulator.total_bets + row.total_bets,
+      total_payouts: accumulator.total_payouts + row.total_payouts
+    }),
+    {
+      weekly_net_ggr: 0,
+      total_bets: 0,
+      total_payouts: 0
+    }
+  );
+
+  const bestDay = dailyPoints.reduce(
+    (best, row) => (!best || row.daily_ggr > best.daily_ggr ? row : best),
+    null
+  );
+  const worstDay = dailyPoints.reduce(
+    (worst, row) => (!worst || row.daily_ggr < worst.daily_ggr ? row : worst),
+    null
+  );
+
+  return {
+    period: {
+      start_date: dailyPoints[0]?.date || null,
+      end_date: dailyPoints[dailyPoints.length - 1]?.date || null,
+      total_days: dailyPoints.length
+    },
+    weekly_net_ggr: roundMoney(totals.weekly_net_ggr),
+    total_bets: roundMoney(totals.total_bets),
+    total_payouts: roundMoney(totals.total_payouts),
+    best_day: bestDay,
+    worst_day: worstDay,
+    waterfall_points: [
+      {
+        label: 'Week start',
+        date: null,
+        daily_ggr: 0,
+        cumulative_ggr: 0,
+        total_bets: 0,
+        total_payouts: 0,
+        waterfall_start: 0,
+        waterfall_end: 0,
+        direction: 'baseline'
+      },
+      ...dailyPoints
+    ]
+  };
+};
+
 const save = async (record) => {
   const normalizedRecord = normalizeRecord(record);
 
@@ -370,6 +468,7 @@ module.exports = {
   findByDate,
   getDailyPromoRoiAnalysis,
   getGgrSummaryReport,
+  getCumulativeGgrWaterfallReport,
   save,
   saveBulk,
   getDashboardSummary,

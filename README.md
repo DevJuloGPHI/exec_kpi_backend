@@ -191,6 +191,66 @@ Response shape:
 }
 ```
 
+### Cumulative GGR Waterfall Report
+
+Returns chart-ready daily GGR steps and cumulative GGR for the net position waterfall dashboard.
+
+```http
+GET /api/daily-summary-operation/cumulative-ggr-waterfall-report?start_date=2026-05-03&end_date=2026-05-09
+```
+
+Response shape:
+
+```json
+{
+  "success": true,
+  "message": "Cumulative GGR waterfall report fetched successfully",
+  "data": {
+    "period": {
+      "start_date": "2026-05-03",
+      "end_date": "2026-05-09",
+      "total_days": 7
+    },
+    "weekly_net_ggr": -4878033.59,
+    "total_bets": 31561262.24,
+    "total_payouts": 36439295.83,
+    "best_day": {
+      "date": "2026-05-03",
+      "daily_ggr": -163162.92,
+      "cumulative_ggr": -163162.92,
+      "total_bets": 1261147.83,
+      "total_payouts": 1424310.75,
+      "waterfall_start": 0,
+      "waterfall_end": -163162.92,
+      "direction": "negative"
+    },
+    "worst_day": {
+      "date": "2026-05-05",
+      "daily_ggr": -1904264.68,
+      "cumulative_ggr": -2684530.2,
+      "total_bets": 6026346.21,
+      "total_payouts": 7930610.89,
+      "waterfall_start": -780265.52,
+      "waterfall_end": -2684530.2,
+      "direction": "negative"
+    },
+    "waterfall_points": [
+      {
+        "label": "Week start",
+        "date": null,
+        "daily_ggr": 0,
+        "cumulative_ggr": 0,
+        "total_bets": 0,
+        "total_payouts": 0,
+        "waterfall_start": 0,
+        "waterfall_end": 0,
+        "direction": "baseline"
+      }
+    ]
+  }
+}
+```
+
 ### Get One Record By Date
 
 ```http
