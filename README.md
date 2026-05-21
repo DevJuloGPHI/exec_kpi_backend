@@ -251,6 +251,62 @@ Response shape:
 }
 ```
 
+### Regulatory Charges By Platform
+
+Returns weekly aggregates for total GGR with PAGCOR share and audit fee components by platform.
+
+```http
+GET /api/daily-summary-operation/regulatory-charges-by-platform?start_date=2026-05-03&end_date=2026-05-09
+```
+
+Response shape:
+
+```json
+{
+  "success": true,
+  "message": "Regulatory charges by platform fetched successfully",
+  "data": {
+    "period": {
+      "start_date": "2026-05-03",
+      "end_date": "2026-05-09",
+      "total_days": 7
+    },
+    "platform_rows": [
+      {
+        "platform_id": 1,
+        "platform_code": "SPORTSBOOK",
+        "platform_name": "Sportsbook",
+        "total_ggr": -5054114.8,
+        "pagcor_share": -758117.22,
+        "audit_fee": -75811.72
+      },
+      {
+        "platform_id": 3,
+        "platform_code": "EGAMES",
+        "platform_name": "E-Games",
+        "total_ggr": 176010.21,
+        "pagcor_share": 26401.53,
+        "audit_fee": 2640.15
+      },
+      {
+        "platform_id": 2,
+        "platform_code": "EBINGO",
+        "platform_name": "E-Bingo",
+        "total_ggr": 71,
+        "pagcor_share": 10.65,
+        "audit_fee": 1.07
+      }
+    ],
+    "daily_total": {
+      "label": "Daily Total",
+      "total_ggr": -4878033.59,
+      "pagcor_share": -731705.04,
+      "audit_fee": -73170.5
+    }
+  }
+}
+```
+
 ### Get One Record By Date
 
 ```http

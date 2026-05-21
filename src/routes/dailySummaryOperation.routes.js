@@ -58,6 +58,12 @@ router.get(
 );
 
 router.get(
+  '/regulatory-charges-by-platform',
+  validateDateRange,
+  dailySummaryOperationController.getRegulatoryChargesByPlatform
+);
+
+router.get(
   '/:summary_date',
   validateSummaryDateParam,
   dailySummaryOperationController.getDailySummaryRecordByDate

@@ -10,8 +10,22 @@ const DAILY_SUMMARY_COLUMNS = `
   ggr
 `;
 
-const roundMoney = (value) => Number(Number(value).toFixed(2));
-const roundDecimal = (value, precision) => Number(Number(value).toFixed(precision));
+const roundNumber = (value, precision) => {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) {
+    return 0;
+  }
+
+  const factor = 10 ** precision;
+  return (
+    Math.sign(numericValue) *
+    Math.round((Math.abs(numericValue) + Number.EPSILON) * factor) /
+    factor
+  );
+};
+
+const roundMoney = (value) => roundNumber(value, 2);
+const roundDecimal = (value, precision) => roundNumber(value, precision);
 
 const normalizeRecord = (record) => {
   const deposit = Number(record.deposit);
@@ -288,6 +302,89 @@ const getCumulativeGgrWaterfallReport = async (filters = {}) => {
   };
 };
 
+const getRegulatoryChargesByPlatform = async (filters = {}) => {
+  const { whereClause, params } = buildDateRangeWhere(filters, 'm.report_date');
+  const [rows] = await pool.execute(
+    `
+      SELECT
+        m.platform_id,
+        p.platform_code,
+        p.platform_name,
+        COALESCE(SUM(m.ggr), 0) AS total_ggr,
+        COALESCE(SUM(m.pagcor_share), 0) AS pagcor_share,
+        COALESCE(SUM(m.audit_fee), 0) AS audit_fee,
+        MIN(m.report_date) AS start_date,
+        MAX(m.report_date) AS end_date,
+        COUNT(DISTINCT m.report_date) AS total_days
+      FROM ggr_daily_platform_metrics m
+      INNER JOIN platforms p ON p.id = m.platform_id
+      ${whereClause}
+      GROUP BY m.platform_id, p.platform_code, p.platform_name
+      ORDER BY
+        CASE p.platform_code
+          WHEN 'SPORTSBOOK' THEN 1
+          WHEN 'EGAMES' THEN 2
+          WHEN 'EBINGO' THEN 3
+          ELSE 99
+        END,
+        p.platform_name ASC
+    `,
+    params
+  );
+
+  const platformRows = rows.map((row) => ({
+    platform_id: Number(row.platform_id),
+    platform_code: row.platform_code,
+    platform_name: row.platform_name,
+    total_ggr: roundMoney(row.total_ggr),
+    pagcor_share: roundMoney(row.pagcor_share),
+    audit_fee: roundMoney(row.audit_fee)
+  }));
+
+  const totals = rows.reduce(
+    (accumulator, row) => ({
+      total_ggr: accumulator.total_ggr + Number(row.total_ggr),
+      pagcor_share: accumulator.pagcor_share + Number(row.pagcor_share),
+      audit_fee: accumulator.audit_fee + Number(row.audit_fee)
+    }),
+    {
+      total_ggr: 0,
+      pagcor_share: 0,
+      audit_fee: 0
+    }
+  );
+
+  const period = rows.reduce(
+    (accumulator, row) => ({
+      start_date:
+        !accumulator.start_date || row.start_date < accumulator.start_date
+          ? row.start_date
+          : accumulator.start_date,
+      end_date:
+        !accumulator.end_date || row.end_date > accumulator.end_date
+          ? row.end_date
+          : accumulator.end_date,
+      total_days: Math.max(accumulator.total_days, Number(row.total_days))
+    }),
+    {
+      start_date: null,
+      end_date: null,
+      total_days: 0
+    }
+  );
+
+  return {
+    period,
+    platform_rows: platformRows,
+    daily_total: {
+      label: 'Daily Total',
+      total_ggr: roundMoney(totals.total_ggr),
+      pagcor_share: roundMoney(totals.pagcor_share),
+      audit_fee: roundMoney(totals.audit_fee)
+    }
+  };
+};
+
 const save = async (record) => {
   const normalizedRecord = normalizeRecord(record);
 
@@ -469,6 +566,7 @@ module.exports = {
   getDailyPromoRoiAnalysis,
   getGgrSummaryReport,
   getCumulativeGgrWaterfallReport,
+  getRegulatoryChargesByPlatform,
   save,
   saveBulk,
   getDashboardSummary,

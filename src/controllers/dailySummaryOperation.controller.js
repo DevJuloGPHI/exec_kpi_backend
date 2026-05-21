@@ -87,6 +87,23 @@ const getCumulativeGgrWaterfallReport = async (req, res, next) => {
   }
 };
 
+const getRegulatoryChargesByPlatform = async (req, res, next) => {
+  try {
+    const report = await dailySummaryOperationService.getRegulatoryChargesByPlatform({
+      start_date: req.query.start_date,
+      end_date: req.query.end_date
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Regulatory charges by platform fetched successfully',
+      data: report
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 const saveDailySummaryRecord = async (req, res, next) => {
   try {
     await dailySummaryOperationService.save(req.body);
@@ -188,6 +205,7 @@ module.exports = {
   getDailyPromoRoiAnalysis,
   getGgrSummaryReport,
   getCumulativeGgrWaterfallReport,
+  getRegulatoryChargesByPlatform,
   saveDailySummaryRecord,
   saveBulkDailySummaryRecords,
   getDashboardSummary,
