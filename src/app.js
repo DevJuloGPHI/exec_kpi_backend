@@ -3,6 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 
+const customerServiceDashboardRoutes = require('./routes/customerServiceDashboard.routes');
 const dailySummaryOperationRoutes = require('./routes/dailySummaryOperation.routes');
 const { errorHandler, notFoundHandler } = require('./middlewares/errorHandler');
 
@@ -22,6 +23,7 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/api/daily-summary-operation', dailySummaryOperationRoutes);
+app.use('/api/customer-service/dashboard', customerServiceDashboardRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

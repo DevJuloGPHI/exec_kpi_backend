@@ -20,12 +20,16 @@ src/
   config/
     db.js
   controllers/
+    customerServiceDashboard.controller.js
     dailySummaryOperation.controller.js
   routes/
+    customerServiceDashboard.routes.js
     dailySummaryOperation.routes.js
   services/
+    customerServiceDashboard.service.js
     dailySummaryOperation.service.js
   validators/
+    customerServiceDashboard.validator.js
     dailySummaryOperation.validator.js
   middlewares/
     errorHandler.js
@@ -90,6 +94,7 @@ GET http://localhost:5000/health
 
 ```text
 http://localhost:5000/api/daily-summary-operation
+http://localhost:5000/api/customer-service/dashboard
 ```
 
 ## Endpoints
@@ -503,6 +508,79 @@ Response shape:
 }
 ```
 
+## Customer Service Dashboard API
+
+Base URL:
+
+```text
+http://localhost:5000/api/customer-service/dashboard
+```
+
+Default report filters:
+
+```text
+start_date=2026-04-01
+end_date=2026-04-30
+category_id=10
+```
+
+Shift mapping:
+
+```text
+1 = Morning
+2 = Afternoon / MID
+3 = Evening / Night
+```
+
+Category mapping:
+
+```text
+1 = Registration
+2 = Promotion
+3 = Verification Code / OTP
+4 = KYC
+5 = Account
+6 = Withdrawal
+7 = Deposit
+8 = Game Related
+9 = Other
+10 = Unlabeled / No Tag
+```
+
+All customer-service dashboard endpoints are read-only `SELECT` reports backed by the `cs_*` tables.
+
+### Composite Dashboard
+
+Returns summary cards, daily and hourly volume, category breakdown, selected-category shift breakdown, shift/category matrix, monthly category summary, and lookup metadata.
+
+```http
+GET /api/customer-service/dashboard?start_date=2026-04-01&end_date=2026-04-30&category_id=10
+```
+
+### Report Endpoints
+
+```http
+GET /api/customer-service/dashboard/summary
+GET /api/customer-service/dashboard/daily-volume
+GET /api/customer-service/dashboard/hourly-volume
+GET /api/customer-service/dashboard/category-breakdown
+GET /api/customer-service/dashboard/shift-breakdown?category_id=10
+GET /api/customer-service/dashboard/shift-category-volume?category_id=10
+GET /api/customer-service/dashboard/shift-category-matrix
+GET /api/customer-service/dashboard/monthly-category-summary
+```
+
+`shift-breakdown` and `shift-category-volume` use `category_id=10` by default. `shift-category-volume` also accepts `shift_id=1`, `2`, or `3`.
+
+### Metadata Endpoints
+
+```http
+GET /api/customer-service/dashboard/categories
+GET /api/customer-service/dashboard/shifts
+GET /api/customer-service/dashboard/time-slots
+GET /api/customer-service/dashboard/import-batches?status=COMPLETED&limit=20
+```
+
 ## Validation Rules
 
 - `summary_date` is required and must be a valid `YYYY-MM-DD` date.
@@ -512,6 +590,8 @@ Response shape:
 - `promotion` is required and must be numeric and greater than or equal to `0`.
 - `start_date` and `end_date` must be valid `YYYY-MM-DD` dates when provided.
 - When both range dates are provided, `start_date` must not be greater than `end_date`.
+- Customer service dashboard `category_id` must be an integer from `1` to `10`.
+- Customer service dashboard `shift_id` must be an integer from `1` to `3`.
 
 Validation error response:
 
