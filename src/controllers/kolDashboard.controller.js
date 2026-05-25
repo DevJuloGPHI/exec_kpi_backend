@@ -52,6 +52,51 @@ const getConversionRateTracking = async (req, res, next) => {
   }
 };
 
+const getDailyPerformanceTrendChart = async (req, res, next) => {
+  try {
+    const data = await kolDashboardService.getDailyPerformanceTrendChart(req.query);
+    return sendSuccess(res, 'Daily Performance Trend Chart fetched successfully', data);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const getTopPerformingKol = async (req, res, next) => {
+  try {
+    const data = await kolDashboardService.getTopPerformingKol(req.query);
+    return sendSuccess(res, 'Top Performing KOL fetched successfully', data);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const getCategoryPerformance = async (req, res, next) => {
+  try {
+    const data = await kolDashboardService.getCategoryPerformance(req.query);
+    return sendSuccess(res, 'KOL category performance fetched successfully', data);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const getCostEfficiencyPanel = async (req, res, next) => {
+  try {
+    const data = await kolDashboardService.getCostEfficiencyPanel(req.query);
+    return sendSuccess(res, 'KOL cost efficiency panel fetched successfully', data);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const getUnderperformingKolWatchlist = async (req, res, next) => {
+  try {
+    const data = await kolDashboardService.getUnderperformingKolWatchlist(req.query);
+    return sendSuccess(res, 'Underperforming KOL watchlist fetched successfully', data);
+  } catch (error) {
+    return next(error);
+  }
+};
+
 const getKolDailyPerformance = async (req, res, next) => {
   try {
     const data = await kolDashboardService.getKolDailyPerformance(req.query);
@@ -76,6 +121,11 @@ module.exports = {
   getKpiCards,
   getSpendAcquisitionVolume,
   getConversionRateTracking,
+  getDailyPerformanceTrendChart,
+  getTopPerformingKol,
+  getCategoryPerformance,
+  getCostEfficiencyPanel,
+  getUnderperformingKolWatchlist,
   getKolDailyPerformance,
   getAcquisitionUnitCosts
 };

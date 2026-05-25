@@ -35,6 +35,36 @@ router.get(
 );
 
 router.get(
+  '/daily-performance-trend-chart',
+  validateKpiFilters,
+  kolDashboardController.getDailyPerformanceTrendChart
+);
+
+router.get(
+  '/top-performing-kol',
+  validateKpiFilters,
+  kolDashboardController.getTopPerformingKol
+);
+
+router.get(
+  '/category-performance',
+  validateKpiFilters,
+  kolDashboardController.getCategoryPerformance
+);
+
+router.get(
+  '/cost-efficiency-panel',
+  validateKpiFilters,
+  kolDashboardController.getCostEfficiencyPanel
+);
+
+router.get(
+  '/underperforming-kol-watchlist',
+  validateKpiFilters,
+  kolDashboardController.getUnderperformingKolWatchlist
+);
+
+router.get(
   '/kol-daily-performance',
   validateKpiFilters,
   kolDashboardController.getKolDailyPerformance

@@ -820,6 +820,493 @@ Response shape:
 }
 ```
 
+### Daily Performance Trend Chart
+
+Returns daily trend data from `kol_agent_daily_performance`, grouped by `latest_payment_date`.
+
+```http
+GET /api/kol/dashboard/daily-performance-trend-chart?start_date=2026-04-04&end_date=2026-05-18
+```
+
+Response shape:
+
+```json
+{
+  "success": true,
+  "message": "Daily Performance Trend Chart fetched successfully",
+  "data": {
+    "filters": {
+      "start_date": "2026-04-04",
+      "end_date": "2026-05-18",
+      "content_category_id": null,
+      "agent_id": null
+    },
+    "source": "kol_agent_daily_performance",
+    "chart": {
+      "key": "daily_performance_trend_chart",
+      "title": "Daily Performance Trend Chart",
+      "description": "Daily KOL agent performance trend grouped by latest payment date.",
+      "series": [
+        {
+          "key": "total_cost",
+          "label": "Total cost",
+          "type": "bar",
+          "value_format": "currency"
+        },
+        {
+          "key": "total_registrations",
+          "label": "Total registrations",
+          "type": "line",
+          "value_format": "number"
+        },
+        {
+          "key": "total_first_deposits",
+          "label": "Total first deposits",
+          "type": "line",
+          "value_format": "number"
+        },
+        {
+          "key": "conversion_rate",
+          "label": "Conversion rate",
+          "type": "line",
+          "value_format": "percentage"
+        }
+      ]
+    },
+    "period": {
+      "start_date": "2026-04-17",
+      "end_date": "2026-05-18",
+      "days_with_records": 32
+    },
+    "summary": {
+      "total_cost": 209857.61,
+      "total_registrations": 13695,
+      "total_first_deposits": 7381,
+      "blended_conversion_rate": 53.9
+    },
+    "daily_points": [
+      {
+        "report_date": "2026-04-17",
+        "total_cost": 8.85,
+        "total_registrations": 5,
+        "total_first_deposits": 1,
+        "conversion_rate": 20
+      }
+    ]
+  }
+}
+```
+
+### Top Performing KOL
+
+Returns KOL agents ranked by conversion rate descending, then cost per first deposit ascending. Agents with zero first deposits are excluded.
+
+```http
+GET /api/kol/dashboard/top-performing-kol?start_date=2026-04-04&end_date=2026-05-18
+```
+
+Response shape:
+
+```json
+{
+  "success": true,
+  "message": "Top Performing KOL fetched successfully",
+  "data": {
+    "filters": {
+      "start_date": "2026-04-04",
+      "end_date": "2026-05-18",
+      "content_category_id": null,
+      "agent_id": null
+    },
+    "source": "kol_agent_daily_performance",
+    "table": {
+      "key": "top_performing_kol",
+      "title": "Top Performing KOL",
+      "description": "Ranked by conversion rate descending, then cost per first deposit ascending.",
+      "rank_order": [
+        {
+          "key": "conversion_rate",
+          "direction": "desc"
+        },
+        {
+          "key": "cost_per_first_deposit",
+          "direction": "asc"
+        }
+      ],
+      "columns": [
+        {
+          "key": "rank",
+          "label": "Rank",
+          "value_format": "number"
+        },
+        {
+          "key": "agent_code",
+          "label": "Agent code",
+          "value_format": "text"
+        },
+        {
+          "key": "category_name",
+          "label": "Category",
+          "value_format": "text"
+        },
+        {
+          "key": "total_cost",
+          "label": "Total cost",
+          "value_format": "currency"
+        },
+        {
+          "key": "total_registrations",
+          "label": "Total registrations",
+          "value_format": "number"
+        },
+        {
+          "key": "total_first_deposits",
+          "label": "Total first deposits",
+          "value_format": "number"
+        },
+        {
+          "key": "cost_per_registration",
+          "label": "Cost per registration",
+          "value_format": "currency"
+        },
+        {
+          "key": "cost_per_first_deposit",
+          "label": "Cost per first deposit",
+          "value_format": "currency"
+        },
+        {
+          "key": "conversion_rate",
+          "label": "Conversion rate",
+          "value_format": "percentage"
+        }
+      ]
+    },
+    "summary": {
+      "total_kols": 227,
+      "total_cost": 202834.65,
+      "total_registrations": 13614,
+      "total_first_deposits": 7381,
+      "blended_conversion_rate": 54.22
+    },
+    "records": [
+      {
+        "rank": 1,
+        "agent_code": "LOL014",
+        "category_name": "Influencer Content",
+        "total_cost": 0.84,
+        "total_registrations": 2,
+        "total_first_deposits": 2,
+        "cost_per_registration": 0.42,
+        "cost_per_first_deposit": 0.42,
+        "conversion_rate": 100
+      }
+    ]
+  }
+}
+```
+
+### Category Performance
+
+Returns Brand Content vs Influencer Content performance grouped by content category and ordered by total cost descending.
+
+```http
+GET /api/kol/dashboard/category-performance?start_date=2026-04-04&end_date=2026-05-18
+```
+
+Response shape:
+
+```json
+{
+  "success": true,
+  "message": "KOL category performance fetched successfully",
+  "data": {
+    "filters": {
+      "start_date": "2026-04-04",
+      "end_date": "2026-05-18",
+      "content_category_id": null,
+      "agent_id": null
+    },
+    "source": "kol_agent_daily_performance",
+    "comparison": {
+      "key": "category_performance",
+      "title": "Category Performance",
+      "description": "Brand Content vs Influencer Content performance grouped by content category.",
+      "order_by": [
+        {
+          "key": "total_cost",
+          "direction": "desc"
+        }
+      ],
+      "dimensions": [
+        {
+          "key": "category_name",
+          "label": "Category"
+        }
+      ],
+      "metrics": [
+        {
+          "key": "total_cost",
+          "label": "Total cost",
+          "value_format": "currency"
+        },
+        {
+          "key": "total_registrations",
+          "label": "Total registrations",
+          "value_format": "number"
+        },
+        {
+          "key": "total_first_deposits",
+          "label": "Total first deposits",
+          "value_format": "number"
+        },
+        {
+          "key": "cost_per_registration",
+          "label": "Cost per registration",
+          "value_format": "currency"
+        },
+        {
+          "key": "cost_per_first_deposit",
+          "label": "Cost per first deposit",
+          "value_format": "currency"
+        },
+        {
+          "key": "conversion_rate",
+          "label": "Conversion rate",
+          "value_format": "percentage"
+        },
+        {
+          "key": "cost_share",
+          "label": "Cost share",
+          "value_format": "percentage"
+        }
+      ]
+    },
+    "summary": {
+      "total_categories": 2,
+      "total_cost": 209857.61,
+      "total_registrations": 13695,
+      "total_first_deposits": 7381,
+      "blended_cost_per_registration": 15.32,
+      "blended_cost_per_first_deposit": 28.43,
+      "blended_conversion_rate": 53.9,
+      "leading_category_by_cost": "Influencer Content"
+    },
+    "records": [
+      {
+        "category_name": "Influencer Content",
+        "total_cost": 164319.51,
+        "total_registrations": 13471,
+        "total_first_deposits": 7320,
+        "cost_per_registration": 12.2,
+        "cost_per_first_deposit": 22.45,
+        "conversion_rate": 54.34,
+        "cost_share": 78.3,
+        "registration_share": 98.36,
+        "first_deposit_share": 99.17
+      },
+      {
+        "category_name": "Brand Content",
+        "total_cost": 45538.1,
+        "total_registrations": 224,
+        "total_first_deposits": 61,
+        "cost_per_registration": 203.3,
+        "cost_per_first_deposit": 746.53,
+        "conversion_rate": 27.23,
+        "cost_share": 21.7,
+        "registration_share": 1.64,
+        "first_deposit_share": 0.83
+      }
+    ]
+  }
+}
+```
+
+### Cost Efficiency Panel
+
+Returns agent-level cost efficiency with performance status buckets that answer whether KOL spend is efficient.
+
+```http
+GET /api/kol/dashboard/cost-efficiency-panel?start_date=2026-04-04&end_date=2026-05-18
+```
+
+Response shape:
+
+```json
+{
+  "success": true,
+  "message": "KOL cost efficiency panel fetched successfully",
+  "data": {
+    "filters": {
+      "start_date": "2026-04-04",
+      "end_date": "2026-05-18",
+      "content_category_id": null,
+      "agent_id": null
+    },
+    "source": "kol_agent_daily_performance",
+    "panel": {
+      "key": "cost_efficiency_panel",
+      "title": "Cost Efficiency Panel",
+      "question": "Are we spending efficiently?",
+      "order_by": [
+        {
+          "key": "cost_per_first_deposit",
+          "direction": "asc"
+        }
+      ],
+      "indicators": [
+        {
+          "key": "high_cost_low_first_deposits",
+          "label": "High cost + low first deposits",
+          "meaning": "Poor performance"
+        },
+        {
+          "key": "low_cost_high_first_deposits",
+          "label": "Low cost + high first deposits",
+          "meaning": "Strong performance"
+        },
+        {
+          "key": "high_registrations_low_deposits",
+          "label": "High registrations + low deposits",
+          "meaning": "Weak user quality"
+        },
+        {
+          "key": "low_registration_cost_high_conversion",
+          "label": "Low registration cost + high conversion",
+          "meaning": "Best KOL traffic"
+        }
+      ],
+      "status_rules": [
+        {
+          "status": "Critical: Spend with no deposit",
+          "rule": "first_deposits = 0 and cost > 0"
+        },
+        {
+          "status": "Excellent",
+          "rule": "cost_per_first_deposit <= 10"
+        },
+        {
+          "status": "Good",
+          "rule": "cost_per_first_deposit <= 20"
+        },
+        {
+          "status": "Needs Review",
+          "rule": "cost_per_first_deposit <= 50"
+        },
+        {
+          "status": "High Cost",
+          "rule": "cost_per_first_deposit > 50 or no efficiency threshold matched"
+        }
+      ]
+    },
+    "summary": {
+      "total_agents": 286,
+      "total_cost": 209857.61,
+      "total_registrations": 13695,
+      "total_first_deposits": 7381,
+      "blended_cost_per_registration": 15.32,
+      "blended_cost_per_first_deposit": 28.43,
+      "blended_conversion_rate": 53.9,
+      "status_counts": {
+        "Critical: Spend with no deposit": 59,
+        "Excellent": 56,
+        "Good": 51,
+        "Needs Review": 86,
+        "High Cost": 34
+      }
+    },
+    "records": [
+      {
+        "agent_code": "LOL439",
+        "total_cost": 57.81,
+        "total_registrations": 0,
+        "total_first_deposits": 0,
+        "cost_per_registration": null,
+        "cost_per_first_deposit": null,
+        "conversion_rate": null,
+        "performance_status": "Critical: Spend with no deposit"
+      }
+    ]
+  }
+}
+```
+
+### Underperforming KOL Watchlist
+
+Returns KOL agents with spend and either zero first deposits or conversion below 20%, ordered by total cost descending for management review.
+
+```http
+GET /api/kol/dashboard/underperforming-kol-watchlist?start_date=2026-04-04&end_date=2026-05-18
+```
+
+Response shape:
+
+```json
+{
+  "success": true,
+  "message": "Underperforming KOL watchlist fetched successfully",
+  "data": {
+    "filters": {
+      "start_date": "2026-04-04",
+      "end_date": "2026-05-18",
+      "content_category_id": null,
+      "agent_id": null
+    },
+    "source": "kol_agent_daily_performance",
+    "watchlist": {
+      "key": "underperforming_kol_watchlist",
+      "title": "Underperforming KOL Watchlist",
+      "description": "KOL agents with spend and either zero first deposits or conversion below 20%.",
+      "management_use": "Supports pause, review, or budget reduction decisions for inefficient KOL traffic.",
+      "criteria": [
+        {
+          "key": "has_spend",
+          "rule": "total_cost > 0"
+        },
+        {
+          "key": "no_first_deposits",
+          "rule": "total_first_deposits = 0"
+        },
+        {
+          "key": "low_conversion",
+          "rule": "conversion_rate < 20"
+        }
+      ],
+      "order_by": [
+        {
+          "key": "total_cost",
+          "direction": "desc"
+        }
+      ]
+    },
+    "summary": {
+      "total_kols": 73,
+      "total_cost_at_risk": 37374.21,
+      "total_registrations": 680,
+      "total_first_deposits": 76,
+      "zero_deposit_kols": 59,
+      "low_conversion_kols": 14,
+      "blended_cost_per_registration": 54.96,
+      "blended_cost_per_first_deposit": 491.77,
+      "blended_conversion_rate": 11.18,
+      "highest_cost_agent": "LOL003"
+    },
+    "records": [
+      {
+        "agent_code": "LOL003",
+        "total_cost": 17803.37,
+        "total_registrations": 87,
+        "total_first_deposits": 13,
+        "cost_per_registration": 204.64,
+        "cost_per_first_deposit": 1369.49,
+        "conversion_rate": 14.94,
+        "watchlist_reason": "Conversion below 20%",
+        "recommended_action": "Review traffic quality"
+      }
+    ]
+  }
+}
+```
+
 ### KOL Daily Performance
 
 Returns the source-of-truth daily performance table with pagination, sorting, and row flags for days with spend but zero first deposits.

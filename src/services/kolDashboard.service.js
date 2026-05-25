@@ -172,6 +172,36 @@ const buildAgentPerformanceWhere = (filters = {}) => {
   };
 };
 
+const buildAgentDailyPerformanceRollupWhere = (filters = {}) => {
+  const conditions = [];
+  const params = [];
+
+  if (filters.start_date) {
+    conditions.push('adp.latest_payment_date >= ?');
+    params.push(filters.start_date);
+  }
+
+  if (filters.end_date) {
+    conditions.push('adp.latest_payment_date <= ?');
+    params.push(filters.end_date);
+  }
+
+  if (filters.content_category_id) {
+    conditions.push('a.content_category_id = ?');
+    params.push(filters.content_category_id);
+  }
+
+  if (filters.agent_id) {
+    conditions.push('adp.agent_id = ?');
+    params.push(filters.agent_id);
+  }
+
+  return {
+    whereClause: conditions.length ? `WHERE ${conditions.join(' AND ')}` : '',
+    params
+  };
+};
+
 const buildMidMonthConsumptionWhere = (filters = {}) => {
   const conditions = ['DAYOFMONTH(report_date) BETWEEN ? AND ?'];
   const params = [MID_MONTH_DAY_START, MID_MONTH_DAY_END];
@@ -642,6 +672,819 @@ const getAgentPerformanceConversionRateTracking = async (filters = {}, qualityTh
     'kol_agent_daily_performance',
     qualityThreshold
   );
+};
+
+const formatDailyPerformanceTrendChart = (rows, filters) => {
+  const dailyPoints = rows.map((row) => ({
+    report_date: row.report_date,
+    total_cost: roundMoney(row.total_cost),
+    total_registrations: toCount(row.total_registrations),
+    total_first_deposits: toCount(row.total_first_deposits),
+    conversion_rate:
+      row.conversion_rate === null || row.conversion_rate === undefined
+        ? null
+        : roundNumber(row.conversion_rate, 2)
+  }));
+
+  const totals = dailyPoints.reduce(
+    (accumulator, row) => ({
+      total_cost: accumulator.total_cost + row.total_cost,
+      total_registrations: accumulator.total_registrations + row.total_registrations,
+      total_first_deposits: accumulator.total_first_deposits + row.total_first_deposits
+    }),
+    {
+      total_cost: 0,
+      total_registrations: 0,
+      total_first_deposits: 0
+    }
+  );
+
+  return {
+    filters: {
+      start_date: filters.start_date || null,
+      end_date: filters.end_date || null,
+      content_category_id: filters.content_category_id || null,
+      agent_id: filters.agent_id || null
+    },
+    source: 'kol_agent_daily_performance',
+    chart: {
+      key: 'daily_performance_trend_chart',
+      title: 'Daily Performance Trend Chart',
+      description:
+        'Daily KOL agent performance trend grouped by latest payment date.',
+      series: [
+        {
+          key: 'total_cost',
+          label: 'Total cost',
+          type: 'bar',
+          value_format: 'currency'
+        },
+        {
+          key: 'total_registrations',
+          label: 'Total registrations',
+          type: 'line',
+          value_format: 'number'
+        },
+        {
+          key: 'total_first_deposits',
+          label: 'Total first deposits',
+          type: 'line',
+          value_format: 'number'
+        },
+        {
+          key: 'conversion_rate',
+          label: 'Conversion rate',
+          type: 'line',
+          value_format: 'percentage'
+        }
+      ]
+    },
+    period: {
+      start_date: dailyPoints[0]?.report_date || null,
+      end_date: dailyPoints[dailyPoints.length - 1]?.report_date || null,
+      days_with_records: dailyPoints.length
+    },
+    summary: {
+      total_cost: roundMoney(totals.total_cost),
+      total_registrations: totals.total_registrations,
+      total_first_deposits: totals.total_first_deposits,
+      blended_conversion_rate:
+        totals.total_registrations > 0
+          ? roundNumber((totals.total_first_deposits / totals.total_registrations) * 100, 2)
+          : null
+    },
+    daily_points: dailyPoints
+  };
+};
+
+const getDailyPerformanceTrendChart = async (filters = {}) => {
+  const normalizedFilters = normalizeFilters(filters);
+  const { whereClause, params } = buildAgentPerformanceWhere(normalizedFilters);
+  const [rows] = await pool.execute(
+    `
+      SELECT
+        p.latest_payment_date AS report_date,
+        COALESCE(SUM(p.cost), 0) AS total_cost,
+        COALESCE(SUM(p.registrations), 0) AS total_registrations,
+        COALESCE(SUM(p.first_deposits), 0) AS total_first_deposits,
+        ROUND(
+          (SUM(p.first_deposits) / NULLIF(SUM(p.registrations), 0)) * 100,
+          2
+        ) AS conversion_rate
+      FROM kol_agent_daily_performance p
+      INNER JOIN kol_agents a ON a.id = p.agent_id
+      ${whereClause}
+      GROUP BY p.latest_payment_date
+      ORDER BY p.latest_payment_date ASC
+    `,
+    params
+  );
+
+  return formatDailyPerformanceTrendChart(rows, normalizedFilters);
+};
+
+const formatTopPerformingKol = (rows, filters) => {
+  const records = rows.map((row, index) => ({
+    rank: index + 1,
+    agent_code: row.agent_code,
+    category_name: row.category_name,
+    total_cost: roundMoney(row.total_cost),
+    total_registrations: toCount(row.total_registrations),
+    total_first_deposits: toCount(row.total_first_deposits),
+    cost_per_registration:
+      row.cost_per_registration === null || row.cost_per_registration === undefined
+        ? null
+        : roundMoney(row.cost_per_registration),
+    cost_per_first_deposit:
+      row.cost_per_first_deposit === null || row.cost_per_first_deposit === undefined
+        ? null
+        : roundMoney(row.cost_per_first_deposit),
+    conversion_rate:
+      row.conversion_rate === null || row.conversion_rate === undefined
+        ? null
+        : roundNumber(row.conversion_rate, 2)
+  }));
+
+  const totals = records.reduce(
+    (accumulator, row) => ({
+      total_cost: accumulator.total_cost + row.total_cost,
+      total_registrations: accumulator.total_registrations + row.total_registrations,
+      total_first_deposits: accumulator.total_first_deposits + row.total_first_deposits
+    }),
+    {
+      total_cost: 0,
+      total_registrations: 0,
+      total_first_deposits: 0
+    }
+  );
+
+  return {
+    filters: {
+      start_date: filters.start_date || null,
+      end_date: filters.end_date || null,
+      content_category_id: filters.content_category_id || null,
+      agent_id: filters.agent_id || null
+    },
+    source: 'kol_agent_daily_performance',
+    table: {
+      key: 'top_performing_kol',
+      title: 'Top Performing KOL',
+      description:
+        'Ranked by conversion rate descending, then cost per first deposit ascending.',
+      rank_order: [
+        {
+          key: 'conversion_rate',
+          direction: 'desc'
+        },
+        {
+          key: 'cost_per_first_deposit',
+          direction: 'asc'
+        }
+      ],
+      columns: [
+        {
+          key: 'rank',
+          label: 'Rank',
+          value_format: 'number'
+        },
+        {
+          key: 'agent_code',
+          label: 'Agent code',
+          value_format: 'text'
+        },
+        {
+          key: 'category_name',
+          label: 'Category',
+          value_format: 'text'
+        },
+        {
+          key: 'total_cost',
+          label: 'Total cost',
+          value_format: 'currency'
+        },
+        {
+          key: 'total_registrations',
+          label: 'Total registrations',
+          value_format: 'number'
+        },
+        {
+          key: 'total_first_deposits',
+          label: 'Total first deposits',
+          value_format: 'number'
+        },
+        {
+          key: 'cost_per_registration',
+          label: 'Cost per registration',
+          value_format: 'currency'
+        },
+        {
+          key: 'cost_per_first_deposit',
+          label: 'Cost per first deposit',
+          value_format: 'currency'
+        },
+        {
+          key: 'conversion_rate',
+          label: 'Conversion rate',
+          value_format: 'percentage'
+        }
+      ]
+    },
+    summary: {
+      total_kols: records.length,
+      total_cost: roundMoney(totals.total_cost),
+      total_registrations: totals.total_registrations,
+      total_first_deposits: totals.total_first_deposits,
+      blended_conversion_rate:
+        totals.total_registrations > 0
+          ? roundNumber((totals.total_first_deposits / totals.total_registrations) * 100, 2)
+          : null
+    },
+    records
+  };
+};
+
+const getTopPerformingKol = async (filters = {}) => {
+  const normalizedFilters = normalizeFilters(filters);
+  const { whereClause, params } = buildAgentDailyPerformanceRollupWhere(normalizedFilters);
+  const [rows] = await pool.execute(
+    `
+      SELECT
+        a.agent_code,
+        cc.category_name,
+        SUM(adp.cost) AS total_cost,
+        SUM(adp.registrations) AS total_registrations,
+        SUM(adp.first_deposits) AS total_first_deposits,
+        ROUND(SUM(adp.cost) / NULLIF(SUM(adp.registrations), 0), 2) AS cost_per_registration,
+        ROUND(SUM(adp.cost) / NULLIF(SUM(adp.first_deposits), 0), 2) AS cost_per_first_deposit,
+        ROUND((SUM(adp.first_deposits) / NULLIF(SUM(adp.registrations), 0)) * 100, 2) AS conversion_rate
+      FROM kol_agent_daily_performance adp
+      INNER JOIN kol_agents a ON adp.agent_id = a.id
+      LEFT JOIN kol_content_categories cc ON a.content_category_id = cc.id
+      ${whereClause}
+      GROUP BY a.agent_code, cc.category_name
+      HAVING SUM(adp.first_deposits) > 0
+      ORDER BY conversion_rate DESC, cost_per_first_deposit ASC
+    `,
+    params
+  );
+
+  return formatTopPerformingKol(rows, normalizedFilters);
+};
+
+const formatCategoryPerformance = (rows, filters) => {
+  const totals = rows.reduce(
+    (accumulator, row) => ({
+      total_cost: accumulator.total_cost + Number(row.total_cost || 0),
+      total_registrations:
+        accumulator.total_registrations + Number(row.total_registrations || 0),
+      total_first_deposits:
+        accumulator.total_first_deposits + Number(row.total_first_deposits || 0)
+    }),
+    {
+      total_cost: 0,
+      total_registrations: 0,
+      total_first_deposits: 0
+    }
+  );
+
+  const records = rows.map((row) => {
+    const totalCost = roundMoney(row.total_cost);
+    const totalRegistrations = toCount(row.total_registrations);
+    const totalFirstDeposits = toCount(row.total_first_deposits);
+
+    return {
+      category_name: row.category_name,
+      total_cost: totalCost,
+      total_registrations: totalRegistrations,
+      total_first_deposits: totalFirstDeposits,
+      cost_per_registration:
+        row.cost_per_registration === null || row.cost_per_registration === undefined
+          ? null
+          : roundMoney(row.cost_per_registration),
+      cost_per_first_deposit:
+        row.cost_per_first_deposit === null || row.cost_per_first_deposit === undefined
+          ? null
+          : roundMoney(row.cost_per_first_deposit),
+      conversion_rate:
+        row.conversion_rate === null || row.conversion_rate === undefined
+          ? null
+          : roundNumber(row.conversion_rate, 2),
+      cost_share:
+        totals.total_cost > 0 ? roundNumber((totalCost / totals.total_cost) * 100, 2) : 0,
+      registration_share:
+        totals.total_registrations > 0
+          ? roundNumber((totalRegistrations / totals.total_registrations) * 100, 2)
+          : 0,
+      first_deposit_share:
+        totals.total_first_deposits > 0
+          ? roundNumber((totalFirstDeposits / totals.total_first_deposits) * 100, 2)
+          : 0
+    };
+  });
+
+  return {
+    filters: {
+      start_date: filters.start_date || null,
+      end_date: filters.end_date || null,
+      content_category_id: filters.content_category_id || null,
+      agent_id: filters.agent_id || null
+    },
+    source: 'kol_agent_daily_performance',
+    comparison: {
+      key: 'category_performance',
+      title: 'Category Performance',
+      description:
+        'Brand Content vs Influencer Content performance grouped by content category.',
+      order_by: [
+        {
+          key: 'total_cost',
+          direction: 'desc'
+        }
+      ],
+      dimensions: [
+        {
+          key: 'category_name',
+          label: 'Category'
+        }
+      ],
+      metrics: [
+        {
+          key: 'total_cost',
+          label: 'Total cost',
+          value_format: 'currency'
+        },
+        {
+          key: 'total_registrations',
+          label: 'Total registrations',
+          value_format: 'number'
+        },
+        {
+          key: 'total_first_deposits',
+          label: 'Total first deposits',
+          value_format: 'number'
+        },
+        {
+          key: 'cost_per_registration',
+          label: 'Cost per registration',
+          value_format: 'currency'
+        },
+        {
+          key: 'cost_per_first_deposit',
+          label: 'Cost per first deposit',
+          value_format: 'currency'
+        },
+        {
+          key: 'conversion_rate',
+          label: 'Conversion rate',
+          value_format: 'percentage'
+        },
+        {
+          key: 'cost_share',
+          label: 'Cost share',
+          value_format: 'percentage'
+        }
+      ]
+    },
+    summary: {
+      total_categories: records.length,
+      total_cost: roundMoney(totals.total_cost),
+      total_registrations: totals.total_registrations,
+      total_first_deposits: totals.total_first_deposits,
+      blended_cost_per_registration:
+        totals.total_registrations > 0
+          ? roundMoney(totals.total_cost / totals.total_registrations)
+          : null,
+      blended_cost_per_first_deposit:
+        totals.total_first_deposits > 0
+          ? roundMoney(totals.total_cost / totals.total_first_deposits)
+          : null,
+      blended_conversion_rate:
+        totals.total_registrations > 0
+          ? roundNumber((totals.total_first_deposits / totals.total_registrations) * 100, 2)
+          : null,
+      leading_category_by_cost: records[0]?.category_name || null
+    },
+    records
+  };
+};
+
+const getCategoryPerformance = async (filters = {}) => {
+  const normalizedFilters = normalizeFilters(filters);
+  const { whereClause, params } = buildAgentDailyPerformanceRollupWhere(normalizedFilters);
+  const [rows] = await pool.execute(
+    `
+      SELECT
+        COALESCE(cc.category_name, 'Uncategorized') AS category_name,
+        COALESCE(SUM(adp.cost), 0) AS total_cost,
+        COALESCE(SUM(adp.registrations), 0) AS total_registrations,
+        COALESCE(SUM(adp.first_deposits), 0) AS total_first_deposits,
+        ROUND(SUM(adp.cost) / NULLIF(SUM(adp.registrations), 0), 2) AS cost_per_registration,
+        ROUND(SUM(adp.cost) / NULLIF(SUM(adp.first_deposits), 0), 2) AS cost_per_first_deposit,
+        ROUND((SUM(adp.first_deposits) / NULLIF(SUM(adp.registrations), 0)) * 100, 2) AS conversion_rate
+      FROM kol_agent_daily_performance adp
+      INNER JOIN kol_agents a ON adp.agent_id = a.id
+      LEFT JOIN kol_content_categories cc ON a.content_category_id = cc.id
+      ${whereClause}
+      GROUP BY COALESCE(cc.category_name, 'Uncategorized')
+      ORDER BY total_cost DESC
+    `,
+    params
+  );
+
+  return formatCategoryPerformance(rows, normalizedFilters);
+};
+
+const formatCostEfficiencyPanel = (rows, filters) => {
+  const records = rows.map((row) => ({
+    agent_code: row.agent_code,
+    total_cost: roundMoney(row.total_cost),
+    total_registrations: toCount(row.total_registrations),
+    total_first_deposits: toCount(row.total_first_deposits),
+    cost_per_registration:
+      row.cost_per_registration === null || row.cost_per_registration === undefined
+        ? null
+        : roundMoney(row.cost_per_registration),
+    cost_per_first_deposit:
+      row.cost_per_first_deposit === null || row.cost_per_first_deposit === undefined
+        ? null
+        : roundMoney(row.cost_per_first_deposit),
+    conversion_rate:
+      row.conversion_rate === null || row.conversion_rate === undefined
+        ? null
+        : roundNumber(row.conversion_rate, 2),
+    performance_status: row.performance_status
+  }));
+
+  const totals = records.reduce(
+    (accumulator, row) => {
+      accumulator.total_cost += row.total_cost;
+      accumulator.total_registrations += row.total_registrations;
+      accumulator.total_first_deposits += row.total_first_deposits;
+      accumulator.status_counts[row.performance_status] =
+        (accumulator.status_counts[row.performance_status] || 0) + 1;
+
+      return accumulator;
+    },
+    {
+      total_cost: 0,
+      total_registrations: 0,
+      total_first_deposits: 0,
+      status_counts: {}
+    }
+  );
+
+  return {
+    filters: {
+      start_date: filters.start_date || null,
+      end_date: filters.end_date || null,
+      content_category_id: filters.content_category_id || null,
+      agent_id: filters.agent_id || null
+    },
+    source: 'kol_agent_daily_performance',
+    panel: {
+      key: 'cost_efficiency_panel',
+      title: 'Cost Efficiency Panel',
+      question: 'Are we spending efficiently?',
+      order_by: [
+        {
+          key: 'cost_per_first_deposit',
+          direction: 'asc'
+        }
+      ],
+      indicators: [
+        {
+          key: 'high_cost_low_first_deposits',
+          label: 'High cost + low first deposits',
+          meaning: 'Poor performance'
+        },
+        {
+          key: 'low_cost_high_first_deposits',
+          label: 'Low cost + high first deposits',
+          meaning: 'Strong performance'
+        },
+        {
+          key: 'high_registrations_low_deposits',
+          label: 'High registrations + low deposits',
+          meaning: 'Weak user quality'
+        },
+        {
+          key: 'low_registration_cost_high_conversion',
+          label: 'Low registration cost + high conversion',
+          meaning: 'Best KOL traffic'
+        }
+      ],
+      status_rules: [
+        {
+          status: 'Critical: Spend with no deposit',
+          rule: 'first_deposits = 0 and cost > 0'
+        },
+        {
+          status: 'Excellent',
+          rule: 'cost_per_first_deposit <= 10'
+        },
+        {
+          status: 'Good',
+          rule: 'cost_per_first_deposit <= 20'
+        },
+        {
+          status: 'Needs Review',
+          rule: 'cost_per_first_deposit <= 50'
+        },
+        {
+          status: 'High Cost',
+          rule: 'cost_per_first_deposit > 50 or no efficiency threshold matched'
+        }
+      ],
+      columns: [
+        {
+          key: 'agent_code',
+          label: 'Agent code',
+          value_format: 'text'
+        },
+        {
+          key: 'total_cost',
+          label: 'Total cost',
+          value_format: 'currency'
+        },
+        {
+          key: 'total_registrations',
+          label: 'Total registrations',
+          value_format: 'number'
+        },
+        {
+          key: 'total_first_deposits',
+          label: 'Total first deposits',
+          value_format: 'number'
+        },
+        {
+          key: 'cost_per_registration',
+          label: 'Cost per registration',
+          value_format: 'currency'
+        },
+        {
+          key: 'cost_per_first_deposit',
+          label: 'Cost per first deposit',
+          value_format: 'currency'
+        },
+        {
+          key: 'conversion_rate',
+          label: 'Conversion rate',
+          value_format: 'percentage'
+        },
+        {
+          key: 'performance_status',
+          label: 'Performance status',
+          value_format: 'text'
+        }
+      ]
+    },
+    summary: {
+      total_agents: records.length,
+      total_cost: roundMoney(totals.total_cost),
+      total_registrations: totals.total_registrations,
+      total_first_deposits: totals.total_first_deposits,
+      blended_cost_per_registration:
+        totals.total_registrations > 0
+          ? roundMoney(totals.total_cost / totals.total_registrations)
+          : null,
+      blended_cost_per_first_deposit:
+        totals.total_first_deposits > 0
+          ? roundMoney(totals.total_cost / totals.total_first_deposits)
+          : null,
+      blended_conversion_rate:
+        totals.total_registrations > 0
+          ? roundNumber((totals.total_first_deposits / totals.total_registrations) * 100, 2)
+          : null,
+      status_counts: totals.status_counts
+    },
+    records
+  };
+};
+
+const getCostEfficiencyPanel = async (filters = {}) => {
+  const normalizedFilters = normalizeFilters(filters);
+  const { whereClause, params } = buildAgentDailyPerformanceRollupWhere(normalizedFilters);
+  const [rows] = await pool.execute(
+    `
+      SELECT
+        a.agent_code,
+        SUM(adp.cost) AS total_cost,
+        SUM(adp.registrations) AS total_registrations,
+        SUM(adp.first_deposits) AS total_first_deposits,
+        ROUND(SUM(adp.cost) / NULLIF(SUM(adp.registrations), 0), 2) AS cost_per_registration,
+        ROUND(SUM(adp.cost) / NULLIF(SUM(adp.first_deposits), 0), 2) AS cost_per_first_deposit,
+        ROUND((SUM(adp.first_deposits) / NULLIF(SUM(adp.registrations), 0)) * 100, 2) AS conversion_rate,
+        CASE
+          WHEN SUM(adp.first_deposits) = 0 AND SUM(adp.cost) > 0 THEN 'Critical: Spend with no deposit'
+          WHEN SUM(adp.cost) / NULLIF(SUM(adp.first_deposits), 0) <= 10 THEN 'Excellent'
+          WHEN SUM(adp.cost) / NULLIF(SUM(adp.first_deposits), 0) <= 20 THEN 'Good'
+          WHEN SUM(adp.cost) / NULLIF(SUM(adp.first_deposits), 0) <= 50 THEN 'Needs Review'
+          ELSE 'High Cost'
+        END AS performance_status
+      FROM kol_agent_daily_performance adp
+      INNER JOIN kol_agents a ON adp.agent_id = a.id
+      ${whereClause}
+      GROUP BY a.agent_code
+      ORDER BY cost_per_first_deposit ASC
+    `,
+    params
+  );
+
+  return formatCostEfficiencyPanel(rows, normalizedFilters);
+};
+
+const formatUnderperformingKolWatchlist = (rows, filters) => {
+  const records = rows.map((row) => {
+    const totalFirstDeposits = toCount(row.total_first_deposits);
+    const conversionRate =
+      row.conversion_rate === null || row.conversion_rate === undefined
+        ? null
+        : roundNumber(row.conversion_rate, 2);
+    const hasNoFirstDeposits = totalFirstDeposits === 0;
+
+    return {
+      agent_code: row.agent_code,
+      total_cost: roundMoney(row.total_cost),
+      total_registrations: toCount(row.total_registrations),
+      total_first_deposits: totalFirstDeposits,
+      cost_per_registration:
+        row.cost_per_registration === null || row.cost_per_registration === undefined
+          ? null
+          : roundMoney(row.cost_per_registration),
+      cost_per_first_deposit:
+        row.cost_per_first_deposit === null || row.cost_per_first_deposit === undefined
+          ? null
+          : roundMoney(row.cost_per_first_deposit),
+      conversion_rate: conversionRate,
+      watchlist_reason: hasNoFirstDeposits
+        ? 'Spend with no first deposits'
+        : 'Conversion below 20%',
+      recommended_action: hasNoFirstDeposits
+        ? 'Pause or review budget'
+        : 'Review traffic quality'
+    };
+  });
+
+  const totals = records.reduce(
+    (accumulator, row) => {
+      accumulator.total_cost += row.total_cost;
+      accumulator.total_registrations += row.total_registrations;
+      accumulator.total_first_deposits += row.total_first_deposits;
+
+      if (row.total_first_deposits === 0) {
+        accumulator.zero_deposit_kols += 1;
+      } else if (row.conversion_rate !== null && row.conversion_rate < 20) {
+        accumulator.low_conversion_kols += 1;
+      }
+
+      return accumulator;
+    },
+    {
+      total_cost: 0,
+      total_registrations: 0,
+      total_first_deposits: 0,
+      zero_deposit_kols: 0,
+      low_conversion_kols: 0
+    }
+  );
+
+  return {
+    filters: {
+      start_date: filters.start_date || null,
+      end_date: filters.end_date || null,
+      content_category_id: filters.content_category_id || null,
+      agent_id: filters.agent_id || null
+    },
+    source: 'kol_agent_daily_performance',
+    watchlist: {
+      key: 'underperforming_kol_watchlist',
+      title: 'Underperforming KOL Watchlist',
+      description:
+        'KOL agents with spend and either zero first deposits or conversion below 20%.',
+      management_use:
+        'Supports pause, review, or budget reduction decisions for inefficient KOL traffic.',
+      criteria: [
+        {
+          key: 'has_spend',
+          rule: 'total_cost > 0'
+        },
+        {
+          key: 'no_first_deposits',
+          rule: 'total_first_deposits = 0'
+        },
+        {
+          key: 'low_conversion',
+          rule: 'conversion_rate < 20'
+        }
+      ],
+      order_by: [
+        {
+          key: 'total_cost',
+          direction: 'desc'
+        }
+      ],
+      columns: [
+        {
+          key: 'agent_code',
+          label: 'Agent code',
+          value_format: 'text'
+        },
+        {
+          key: 'total_cost',
+          label: 'Total cost',
+          value_format: 'currency'
+        },
+        {
+          key: 'total_registrations',
+          label: 'Total registrations',
+          value_format: 'number'
+        },
+        {
+          key: 'total_first_deposits',
+          label: 'Total first deposits',
+          value_format: 'number'
+        },
+        {
+          key: 'cost_per_registration',
+          label: 'Cost per registration',
+          value_format: 'currency'
+        },
+        {
+          key: 'cost_per_first_deposit',
+          label: 'Cost per first deposit',
+          value_format: 'currency'
+        },
+        {
+          key: 'conversion_rate',
+          label: 'Conversion rate',
+          value_format: 'percentage'
+        },
+        {
+          key: 'watchlist_reason',
+          label: 'Watchlist reason',
+          value_format: 'text'
+        },
+        {
+          key: 'recommended_action',
+          label: 'Recommended action',
+          value_format: 'text'
+        }
+      ]
+    },
+    summary: {
+      total_kols: records.length,
+      total_cost_at_risk: roundMoney(totals.total_cost),
+      total_registrations: totals.total_registrations,
+      total_first_deposits: totals.total_first_deposits,
+      zero_deposit_kols: totals.zero_deposit_kols,
+      low_conversion_kols: totals.low_conversion_kols,
+      blended_cost_per_registration:
+        totals.total_registrations > 0
+          ? roundMoney(totals.total_cost / totals.total_registrations)
+          : null,
+      blended_cost_per_first_deposit:
+        totals.total_first_deposits > 0
+          ? roundMoney(totals.total_cost / totals.total_first_deposits)
+          : null,
+      blended_conversion_rate:
+        totals.total_registrations > 0
+          ? roundNumber((totals.total_first_deposits / totals.total_registrations) * 100, 2)
+          : null,
+      highest_cost_agent: records[0]?.agent_code || null
+    },
+    records
+  };
+};
+
+const getUnderperformingKolWatchlist = async (filters = {}) => {
+  const normalizedFilters = normalizeFilters(filters);
+  const { whereClause, params } = buildAgentDailyPerformanceRollupWhere(normalizedFilters);
+  const [rows] = await pool.execute(
+    `
+      SELECT
+        a.agent_code,
+        SUM(adp.cost) AS total_cost,
+        SUM(adp.registrations) AS total_registrations,
+        SUM(adp.first_deposits) AS total_first_deposits,
+        ROUND(SUM(adp.cost) / NULLIF(SUM(adp.registrations), 0), 2) AS cost_per_registration,
+        ROUND(SUM(adp.cost) / NULLIF(SUM(adp.first_deposits), 0), 2) AS cost_per_first_deposit,
+        ROUND((SUM(adp.first_deposits) / NULLIF(SUM(adp.registrations), 0)) * 100, 2) AS conversion_rate
+      FROM kol_agent_daily_performance adp
+      INNER JOIN kol_agents a ON adp.agent_id = a.id
+      ${whereClause}
+      GROUP BY a.agent_code
+      HAVING
+        SUM(adp.cost) > 0
+        AND (
+          SUM(adp.first_deposits) = 0
+          OR ROUND((SUM(adp.first_deposits) / NULLIF(SUM(adp.registrations), 0)) * 100, 2) < 20
+        )
+      ORDER BY total_cost DESC
+    `,
+    params
+  );
+
+  return formatUnderperformingKolWatchlist(rows, normalizedFilters);
 };
 
 const formatDailyPerformanceSummary = (row) => {
@@ -1138,12 +1981,22 @@ const getDashboardData = async (filters = {}) => {
     summary,
     spendAcquisitionVolume,
     conversionRateTracking,
+    dailyPerformanceTrendChart,
+    topPerformingKol,
+    categoryPerformance,
+    costEfficiencyPanel,
+    underperformingKolWatchlist,
     kolDailyPerformance,
     acquisitionUnitCosts
   ] = await Promise.all([
     getSummary(filters),
     getSpendAcquisitionVolume(filters),
     getConversionRateTracking(filters),
+    getDailyPerformanceTrendChart(filters),
+    getTopPerformingKol(filters),
+    getCategoryPerformance(filters),
+    getCostEfficiencyPanel(filters),
+    getUnderperformingKolWatchlist(filters),
     getKolDailyPerformance(filters),
     getAcquisitionUnitCosts(filters)
   ]);
@@ -1152,6 +2005,11 @@ const getDashboardData = async (filters = {}) => {
     summary,
     spend_acquisition_volume: spendAcquisitionVolume,
     conversion_rate_tracking: conversionRateTracking,
+    daily_performance_trend_chart: dailyPerformanceTrendChart,
+    top_performing_kol: topPerformingKol,
+    category_performance: categoryPerformance,
+    cost_efficiency_panel: costEfficiencyPanel,
+    underperforming_kol_watchlist: underperformingKolWatchlist,
     kol_daily_performance: kolDailyPerformance,
     acquisition_unit_costs: acquisitionUnitCosts
   };
@@ -1161,6 +2019,11 @@ module.exports = {
   getSummary,
   getSpendAcquisitionVolume,
   getConversionRateTracking,
+  getDailyPerformanceTrendChart,
+  getTopPerformingKol,
+  getCategoryPerformance,
+  getCostEfficiencyPanel,
+  getUnderperformingKolWatchlist,
   getKolDailyPerformance,
   getAcquisitionUnitCosts,
   getKpiCards,
