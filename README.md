@@ -22,15 +22,19 @@ src/
   controllers/
     customerServiceDashboard.controller.js
     dailySummaryOperation.controller.js
+    kolDashboard.controller.js
   routes/
     customerServiceDashboard.routes.js
     dailySummaryOperation.routes.js
+    kolDashboard.routes.js
   services/
     customerServiceDashboard.service.js
     dailySummaryOperation.service.js
+    kolDashboard.service.js
   validators/
     customerServiceDashboard.validator.js
     dailySummaryOperation.validator.js
+    kolDashboard.validator.js
   middlewares/
     errorHandler.js
   app.js
@@ -95,6 +99,7 @@ GET http://localhost:5000/health
 ```text
 http://localhost:5000/api/daily-summary-operation
 http://localhost:5000/api/customer-service/dashboard
+http://localhost:5000/api/kol/dashboard
 ```
 
 ## Endpoints
@@ -581,6 +586,431 @@ GET /api/customer-service/dashboard/time-slots
 GET /api/customer-service/dashboard/import-batches?status=COMPLETED&limit=20
 ```
 
+## KOL Dashboard API
+
+Base URL:
+
+```text
+http://localhost:5000/api/kol/dashboard
+```
+
+### KPI Cards
+
+Returns the four KPI cards for KOL acquisition: total ad spend, total first deposits, overall conversion rate, and blended acquisition cost.
+
+```http
+GET /api/kol/dashboard/kpi-cards?start_date=2026-05-01&end_date=2026-05-31
+```
+
+Optional filters:
+
+```text
+start_date=YYYY-MM-DD
+end_date=YYYY-MM-DD
+content_category_id=1
+agent_id=1
+```
+
+Without `content_category_id` or `agent_id`, totals come from `kol_daily_consumption_summary`. With either filter, totals come from `kol_agent_daily_performance` joined to `kol_agents`.
+
+Response shape:
+
+```json
+{
+  "success": true,
+  "message": "KOL KPI cards fetched successfully",
+  "data": {
+    "filters": {
+      "start_date": "2026-05-01",
+      "end_date": "2026-05-31",
+      "content_category_id": null,
+      "agent_id": null
+    },
+    "source": "kol_daily_consumption_summary",
+    "period": {
+      "start_date": "2026-05-01",
+      "end_date": "2026-05-31",
+      "days_with_records": 31
+    },
+    "totals": {
+      "total_ad_spend": 320000,
+      "total_registrations": 3065,
+      "total_first_deposits": 1900,
+      "overall_conversion_rate": 61.99,
+      "cost_per_registration": 104.4,
+      "blended_acquisition_cost": 168.42
+    },
+    "cards": [
+      {
+        "key": "total_ad_spend",
+        "title": "Total Ad Spend",
+        "value": 320000,
+        "format": "currency_compact",
+        "description": "Sum of cost - money out the door"
+      }
+    ]
+  }
+}
+```
+
+The same summary payload is also available at:
+
+```http
+GET /api/kol/dashboard/summary
+```
+
+The dashboard wrapper is available at:
+
+```http
+GET /api/kol/dashboard
+```
+
+### Spend Acquisition Volume
+
+Returns chart-ready daily ad spend bars and new first depositor line data.
+
+```http
+GET /api/kol/dashboard/spend-acquisition-volume?start_date=2026-04-04&end_date=2026-05-18
+```
+
+Response shape:
+
+```json
+{
+  "success": true,
+  "message": "KOL spend acquisition volume fetched successfully",
+  "data": {
+    "filters": {
+      "start_date": "2026-04-04",
+      "end_date": "2026-05-18",
+      "content_category_id": null,
+      "agent_id": null
+    },
+    "source": "kol_daily_consumption_summary",
+    "chart": {
+      "key": "spend_acquisition_volume",
+      "title": "Spend vs. acquisition volume",
+      "description": "Daily cost (bars) vs. new first depositors (line). Conversions should scale when spend rises.",
+      "series": [
+        {
+          "key": "ad_spend",
+          "label": "Ad spend",
+          "type": "bar",
+          "value_format": "currency"
+        },
+        {
+          "key": "new_first_depositors",
+          "label": "New first depositors",
+          "type": "line",
+          "value_format": "number"
+        }
+      ]
+    },
+    "period": {
+      "start_date": "2026-04-04",
+      "end_date": "2026-05-18",
+      "days_with_records": 45
+    },
+    "totals": {
+      "ad_spend": 370127.86,
+      "new_first_depositors": 27657,
+      "registrations": 40755,
+      "blended_acquisition_cost": 13.38
+    },
+    "daily_points": [
+      {
+        "date": "2026-04-04",
+        "ad_spend": 375,
+        "new_first_depositors": 12,
+        "registrations": 18
+      }
+    ]
+  }
+}
+```
+
+### Conversion Rate Tracking
+
+Returns chart-ready daily registration-to-first-deposit conversion rates. The rate is recomputed from daily totals:
+
+```text
+conversion_rate = first_deposits / registrations * 100
+```
+
+```http
+GET /api/kol/dashboard/conversion-rate-tracking?start_date=2026-04-04&end_date=2026-05-18
+```
+
+Optional quality threshold override:
+
+```text
+conversion_quality_threshold=50
+```
+
+`quality_threshold=50` is also accepted as a shorter alias.
+
+Response shape:
+
+```json
+{
+  "success": true,
+  "message": "KOL conversion rate tracking fetched successfully",
+  "data": {
+    "filters": {
+      "start_date": "2026-04-04",
+      "end_date": "2026-05-18",
+      "content_category_id": null,
+      "agent_id": null
+    },
+    "source": "kol_daily_consumption_summary",
+    "chart": {
+      "key": "conversion_rate_tracking",
+      "title": "Conversion Rate Tracking",
+      "description": "Registration-to-deposit rate by day. Downward trends signal low-intent traffic.",
+      "series": [
+        {
+          "key": "conversion_rate",
+          "label": "Conversion",
+          "type": "line",
+          "value_format": "percentage"
+        }
+      ],
+      "reference_lines": [
+        {
+          "key": "quality_threshold",
+          "label": "50% quality",
+          "value": 50,
+          "value_format": "percentage"
+        }
+      ]
+    },
+    "period": {
+      "start_date": "2026-04-04",
+      "end_date": "2026-05-18",
+      "days_with_records": 45
+    },
+    "threshold": {
+      "quality": 50
+    },
+    "summary": {
+      "registrations": 31034,
+      "first_deposits": 19251,
+      "blended_conversion_rate": 62.03,
+      "average_daily_conversion_rate": 41.7,
+      "latest_conversion_rate": 69.46,
+      "period_change": 69.46,
+      "trend_direction": "up",
+      "below_quality_days": 22,
+      "within_quality_days": 23
+    },
+    "daily_points": [
+      {
+        "date": "2026-04-18",
+        "registrations": 112,
+        "first_deposits": 73,
+        "conversion_rate": 65.18,
+        "quality_threshold": 50,
+        "below_quality_threshold": false,
+        "change_from_previous_day": 8.39,
+        "trend_direction": "up",
+        "status": "within_quality"
+      }
+    ]
+  }
+}
+```
+
+### KOL Daily Performance
+
+Returns the source-of-truth daily performance table with pagination, sorting, and row flags for days with spend but zero first deposits.
+
+```http
+GET /api/kol/dashboard/kol-daily-performance?start_date=2026-04-04&end_date=2026-05-18&page=1&per_page=10
+```
+
+Optional table controls:
+
+```text
+page=1
+per_page=10
+sort_by=date
+sort_direction=asc
+```
+
+Sortable fields:
+
+```text
+date
+cost
+registrations
+first_deposits
+cost_per_registration
+cost_per_first_deposit
+conversion
+```
+
+Response shape:
+
+```json
+{
+  "success": true,
+  "message": "KOL daily performance fetched successfully",
+  "data": {
+    "filters": {
+      "start_date": "2026-04-04",
+      "end_date": "2026-05-18",
+      "content_category_id": null,
+      "agent_id": null
+    },
+    "source": "kol_daily_consumption_summary",
+    "table": {
+      "key": "kol_daily_performance",
+      "title": "KOL daily performance",
+      "description": "Source of truth - sort any column. Rows in red had spend with zero first deposits.",
+      "columns": [
+        {
+          "key": "date",
+          "label": "Date",
+          "value_format": "date",
+          "sortable": true
+        }
+      ]
+    },
+    "period": {
+      "start_date": "2026-04-04",
+      "end_date": "2026-05-18",
+      "days_with_records": 45
+    },
+    "totals": {
+      "cost": 346008.65,
+      "registrations": 31034,
+      "first_deposits": 19251,
+      "cost_per_registration": 11.15,
+      "cost_per_first_deposit": 17.97,
+      "conversion": 62.03
+    },
+    "sort": {
+      "sort_by": "date",
+      "sort_direction": "asc"
+    },
+    "pagination": {
+      "page": 1,
+      "per_page": 10,
+      "total_records": 45,
+      "total_pages": 5,
+      "from_record": 1,
+      "to_record": 10,
+      "showing_label": "Showing 1-10 of 45"
+    },
+    "records": [
+      {
+        "date": "2026-04-04",
+        "display_date": "Apr 4, 2026",
+        "cost": 911.48,
+        "registrations": 5,
+        "first_deposits": 0,
+        "cost_per_registration": 182.3,
+        "cost_per_first_deposit": null,
+        "conversion": 0,
+        "has_spend_without_first_deposit": true,
+        "status": "spend_without_first_deposit"
+      }
+    ]
+  }
+}
+```
+
+### Acquisition Unit Costs
+
+Returns monthly mid-month acquisition unit costs. Each month aggregates days `1-15`, then recomputes blended cost per registration and cost per first deposit from total cost and acquisition counts.
+
+```http
+GET /api/kol/dashboard/acquisition-unit-costs?start_date=2026-04-01&end_date=2026-05-31
+```
+
+Optional target overrides:
+
+```text
+cost_per_registration_target=30
+cost_per_first_deposit_target=60
+```
+
+Response shape:
+
+```json
+{
+  "success": true,
+  "message": "KOL acquisition unit costs fetched successfully",
+  "data": {
+    "filters": {
+      "start_date": "2026-04-01",
+      "end_date": "2026-05-31",
+      "content_category_id": null,
+      "agent_id": null
+    },
+    "source": "kol_daily_consumption_summary",
+    "chart": {
+      "key": "acquisition_unit_costs",
+      "title": "Acquisition unit costs",
+      "description": "Mid-month basis (days 1-15): blended CPR and CPFD by calendar month. Lower is better; red bars exceed targets.",
+      "basis": {
+        "period": "calendar_month",
+        "day_start": 1,
+        "day_end": 15
+      },
+      "series": [
+        {
+          "key": "cost_per_first_deposit",
+          "label": "Cost per first deposit",
+          "type": "bar",
+          "value_format": "currency",
+          "target": 60
+        },
+        {
+          "key": "cost_per_registration",
+          "label": "Cost per registration",
+          "type": "bar",
+          "value_format": "currency",
+          "target": 30
+        }
+      ]
+    },
+    "targets": {
+      "cost_per_registration": 30,
+      "cost_per_first_deposit": 60
+    },
+    "period": {
+      "start_month": "2026-04",
+      "end_month": "2026-05",
+      "months_with_records": 2
+    },
+    "alert": {
+      "elevated_month_count": 1,
+      "message": "1 month(s) with elevated unit costs in this window."
+    },
+    "monthly_points": [
+      {
+        "month": "2026-04",
+        "label": "Apr-15",
+        "period_start_date": "2026-04-04",
+        "period_end_date": "2026-04-15",
+        "data_end_date": "2026-04-15",
+        "days_with_records": 12,
+        "total_cost": 7816.98,
+        "registrations": 257,
+        "first_deposits": 22,
+        "cost_per_registration": 30.42,
+        "cost_per_first_deposit": 355.32,
+        "exceeds_cost_per_registration_target": true,
+        "exceeds_cost_per_first_deposit_target": true,
+        "has_elevated_unit_costs": true,
+        "status": "elevated"
+      }
+    ]
+  }
+}
+```
+
 ## Validation Rules
 
 - `summary_date` is required and must be a valid `YYYY-MM-DD` date.
@@ -592,6 +1022,11 @@ GET /api/customer-service/dashboard/import-batches?status=COMPLETED&limit=20
 - When both range dates are provided, `start_date` must not be greater than `end_date`.
 - Customer service dashboard `category_id` must be an integer from `1` to `10`.
 - Customer service dashboard `shift_id` must be an integer from `1` to `3`.
+- KOL dashboard `content_category_id` and `agent_id` must be positive integers when provided.
+- KOL dashboard unit-cost targets must be numeric and greater than or equal to `0`.
+- KOL dashboard conversion quality thresholds must be numeric and greater than or equal to `0`.
+- KOL daily performance `page`, `per_page`, and `limit` must be positive integers; `per_page` and `limit` are capped at `100`.
+- KOL daily performance `sort_by` and `sort_direction` must use supported values.
 
 Validation error response:
 
