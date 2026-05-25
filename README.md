@@ -653,6 +653,74 @@ Response shape:
 }
 ```
 
+### Agent KPI Cards
+
+Returns the four KPI cards for the agent view: total active agents, total ad spend, first-time deposits, and conversion efficiency.
+
+```http
+GET /api/kol/dashboard/agent-kpi-cards?start_date=2026-04-04&end_date=2026-05-18
+```
+
+Response shape:
+
+```json
+{
+  "success": true,
+  "message": "KOL agent KPI cards fetched successfully",
+  "data": {
+    "filters": {
+      "start_date": "2026-04-04",
+      "end_date": "2026-05-18",
+      "content_category_id": null,
+      "agent_id": null
+    },
+    "source": "kol_agent_daily_performance",
+    "period": {
+      "start_date": "2026-04-17",
+      "end_date": "2026-05-18",
+      "days_with_records": 32
+    },
+    "totals": {
+      "total_active_agents": 286,
+      "total_ad_spend": 209857.61,
+      "total_registrations": 13695,
+      "first_time_deposits": 7381,
+      "conversion_efficiency": 53.9
+    },
+    "cards": [
+      {
+        "key": "total_active_agents",
+        "title": "Total Active Agents",
+        "value": 286,
+        "format": "number_compact",
+        "description": "Agents with activity in this view"
+      },
+      {
+        "key": "total_ad_spend",
+        "title": "Total Ad Spend",
+        "value": 209857.61,
+        "format": "currency_compact",
+        "description": "Sum of partner media cost"
+      },
+      {
+        "key": "first_time_deposits",
+        "title": "First-Time Deposits",
+        "value": 7381,
+        "format": "number_compact",
+        "description": "New first-time depositors acquired"
+      },
+      {
+        "key": "conversion_efficiency",
+        "title": "Conversion Efficiency",
+        "value": 53.9,
+        "format": "percentage",
+        "description": "FTD / registrations"
+      }
+    ]
+  }
+}
+```
+
 The same summary payload is also available at:
 
 ```http
@@ -1115,6 +1183,134 @@ Response shape:
         "cost_share": 21.7,
         "registration_share": 1.64,
         "first_deposit_share": 0.83
+      }
+    ]
+  }
+}
+```
+
+### Content Analysis
+
+Returns grouped agent tables by content category, including latest payment, top-ups, cost, registrations, deposits, CPR, CPFD, conversion rate, and alert rows for spend with zero deposits.
+
+```http
+GET /api/kol/dashboard/content-analysis?start_date=2026-04-04&end_date=2026-05-18
+```
+
+Response shape:
+
+```json
+{
+  "success": true,
+  "message": "KOL content analysis fetched successfully",
+  "data": {
+    "filters": {
+      "start_date": "2026-04-04",
+      "end_date": "2026-05-18",
+      "content_category_id": null,
+      "agent_id": null
+    },
+    "source": "kol_agent_daily_performance",
+    "table": {
+      "key": "content_analysis",
+      "title": "Content Analysis",
+      "description": "Agent performance grouped by content category.",
+      "row_alert": {
+        "key": "has_spend_without_deposit",
+        "description": "Rows with spend and zero deposits should be highlighted."
+      },
+      "columns": [
+        {
+          "key": "agent_code",
+          "label": "Agent ID",
+          "value_format": "text"
+        },
+        {
+          "key": "latest_payment_display",
+          "label": "Latest Payment",
+          "value_format": "date"
+        },
+        {
+          "key": "top_ups",
+          "label": "Top-ups",
+          "value_format": "number"
+        },
+        {
+          "key": "cost",
+          "label": "Cost",
+          "value_format": "currency"
+        },
+        {
+          "key": "registrations",
+          "label": "Reg.",
+          "value_format": "number"
+        },
+        {
+          "key": "deposits",
+          "label": "Deposits",
+          "value_format": "number"
+        },
+        {
+          "key": "cost_per_registration",
+          "label": "CPR",
+          "value_format": "currency"
+        },
+        {
+          "key": "cost_per_first_deposit",
+          "label": "CPFD",
+          "value_format": "currency"
+        },
+        {
+          "key": "conversion_rate",
+          "label": "Conv %",
+          "value_format": "percentage"
+        }
+      ]
+    },
+    "summary": {
+      "total_categories": 2,
+      "total_agents": 286,
+      "total_top_ups": 1027,
+      "total_cost": 209857.61,
+      "total_registrations": 13695,
+      "total_deposits": 7381,
+      "cost_per_registration": 15.32,
+      "cost_per_first_deposit": 28.43,
+      "conversion_rate": 53.9,
+      "alert_rows": 59
+    },
+    "sections": [
+      {
+        "category_name": "Brand Content",
+        "title": "Brand Content",
+        "agent_count": 3,
+        "summary": {
+          "total_agents": 3,
+          "total_top_ups": 66,
+          "total_cost": 45538.1,
+          "total_registrations": 224,
+          "total_deposits": 61,
+          "cost_per_registration": 203.3,
+          "cost_per_first_deposit": 746.53,
+          "conversion_rate": 27.23,
+          "alert_rows": 0
+        },
+        "records": [
+          {
+            "agent_code": "LOL003",
+            "latest_payment_date": "2026-05-01",
+            "latest_payment_display": "May 1, 2026",
+            "top_ups": 23,
+            "cost": 17803.37,
+            "registrations": 87,
+            "deposits": 13,
+            "cost_per_registration": 204.64,
+            "cost_per_first_deposit": 1369.49,
+            "conversion_rate": 14.94,
+            "has_spend_without_deposit": false,
+            "status": "normal"
+          }
+        ]
       }
     ]
   }

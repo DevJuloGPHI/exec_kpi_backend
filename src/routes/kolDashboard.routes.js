@@ -23,6 +23,12 @@ router.get(
 );
 
 router.get(
+  '/agent-kpi-cards',
+  validateKpiFilters,
+  kolDashboardController.getAgentKpiCards
+);
+
+router.get(
   '/spend-acquisition-volume',
   validateKpiFilters,
   kolDashboardController.getSpendAcquisitionVolume
@@ -50,6 +56,12 @@ router.get(
   '/category-performance',
   validateKpiFilters,
   kolDashboardController.getCategoryPerformance
+);
+
+router.get(
+  '/content-analysis',
+  validateKpiFilters,
+  kolDashboardController.getContentAnalysis
 );
 
 router.get(

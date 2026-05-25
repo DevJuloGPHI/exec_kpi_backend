@@ -34,6 +34,15 @@ const getKpiCards = async (req, res, next) => {
   }
 };
 
+const getAgentKpiCards = async (req, res, next) => {
+  try {
+    const data = await kolDashboardService.getAgentKpiCards(req.query);
+    return sendSuccess(res, 'KOL agent KPI cards fetched successfully', data);
+  } catch (error) {
+    return next(error);
+  }
+};
+
 const getSpendAcquisitionVolume = async (req, res, next) => {
   try {
     const data = await kolDashboardService.getSpendAcquisitionVolume(req.query);
@@ -79,6 +88,15 @@ const getCategoryPerformance = async (req, res, next) => {
   }
 };
 
+const getContentAnalysis = async (req, res, next) => {
+  try {
+    const data = await kolDashboardService.getContentAnalysis(req.query);
+    return sendSuccess(res, 'KOL content analysis fetched successfully', data);
+  } catch (error) {
+    return next(error);
+  }
+};
+
 const getCostEfficiencyPanel = async (req, res, next) => {
   try {
     const data = await kolDashboardService.getCostEfficiencyPanel(req.query);
@@ -119,11 +137,13 @@ module.exports = {
   getDashboardData,
   getSummary,
   getKpiCards,
+  getAgentKpiCards,
   getSpendAcquisitionVolume,
   getConversionRateTracking,
   getDailyPerformanceTrendChart,
   getTopPerformingKol,
   getCategoryPerformance,
+  getContentAnalysis,
   getCostEfficiencyPanel,
   getUnderperformingKolWatchlist,
   getKolDailyPerformance,
