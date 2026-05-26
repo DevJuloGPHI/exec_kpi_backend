@@ -20,26 +20,32 @@ src/
   config/
     db.js
   controllers/
+    adDashboard.controller.js
     customerServiceDashboard.controller.js
     dailySummaryOperation.controller.js
     kolDashboard.controller.js
   routes/
+    adDashboard.routes.js
     customerServiceDashboard.routes.js
     dailySummaryOperation.routes.js
     kolDashboard.routes.js
   services/
+    adDashboard.service.js
     customerServiceDashboard.service.js
     dailySummaryOperation.service.js
     kolDashboard.service.js
   validators/
+    adDashboard.validator.js
     customerServiceDashboard.validator.js
     dailySummaryOperation.validator.js
     kolDashboard.validator.js
   middlewares/
     errorHandler.js
+    validate.middleware.js
   app.js
   server.js
 database/
+  ad_dashboard_schema.sql
   seed_daily_summary_operation.sql
 ```
 
@@ -76,6 +82,12 @@ Run the seed file. It creates the table and inserts or updates the seed records:
 mysql -u root exec_dashboard_db < database/seed_daily_summary_operation.sql
 ```
 
+Create and seed the advertising dashboard tables:
+
+```bash
+mysql -u root exec_dashboard_db < database/ad_dashboard_schema.sql
+```
+
 ## Run
 
 ```bash
@@ -100,6 +112,133 @@ GET http://localhost:5000/health
 http://localhost:5000/api/daily-summary-operation
 http://localhost:5000/api/customer-service/dashboard
 http://localhost:5000/api/kol/dashboard
+http://localhost:5000/api/ad-dashboard
+```
+
+## Advertising Daily Performance Dashboard API
+
+### Install Commands
+
+```bash
+npm install express mysql2 dotenv cors helmet morgan express-validator
+npm install --save-dev nodemon
+```
+
+### Package Scripts
+
+```json
+{
+  "start": "node src/server.js",
+  "dev": "nodemon src/server.js"
+}
+```
+
+### Environment Example
+
+```env
+PORT=5000
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=
+DB_NAME=exec_dashboard_db
+```
+
+### Endpoints
+
+```http
+GET /api/ad-dashboard/channels
+GET /api/ad-dashboard/daily?start_date=2026-05-01&end_date=2026-05-25
+GET /api/ad-dashboard/totals?start_date=2026-05-01&end_date=2026-05-25
+GET /api/ad-dashboard/totals/self-run?start_date=2026-05-01&end_date=2026-05-25
+GET /api/ad-dashboard/totals/third-party?start_date=2026-05-01&end_date=2026-05-25
+GET /api/ad-dashboard/totals/general?start_date=2026-05-01&end_date=2026-05-25
+POST /api/ad-dashboard/import-batches
+POST /api/ad-dashboard/daily
+```
+
+### Postman Examples
+
+Create an import batch:
+
+```http
+POST http://localhost:5000/api/ad-dashboard/import-batches
+Content-Type: application/json
+```
+
+```json
+{
+  "file_name": "广告_数据报告 - 日报.pdf",
+  "report_type": "daily_ad_performance",
+  "imported_by": "admin",
+  "remarks": "Daily advertising report import"
+}
+```
+
+Insert or update one leaf-channel daily row:
+
+```http
+POST http://localhost:5000/api/ad-dashboard/daily
+Content-Type: application/json
+```
+
+```json
+{
+  "import_batch_id": 1,
+  "channel_id": 1,
+  "report_date": "2026-05-25",
+  "spend": 43.34,
+  "registrations": 0,
+  "first_deposits": 0
+}
+```
+
+### Response Format
+
+Success:
+
+```json
+{
+  "success": true,
+  "message": "Data fetched successfully",
+  "data": []
+}
+```
+
+Validation error:
+
+```json
+{
+  "success": false,
+  "message": "Validation failed",
+  "errors": []
+}
+```
+
+### Total Row Rules
+
+Only leaf channel rows are stored in `ad_daily_performance`. The pink `Self-run Ads Total`, blue `Third Party Ads Total`, and gold `General Total Ads` rows are calculated dynamically with SQL aggregation.
+
+Pink totals filter `ad_channel_groups.group_code = 'SELF_RUN'` and currently aggregate Richads. Blue totals filter `group_code = 'THIRD_PARTY'` and aggregate Yugatech, AISCORE match, AISCORE odds, and AISCORE chat. Gold totals aggregate all channel groups and all channels by `report_date`.
+
+Calculated KPI formulas:
+
+```text
+registration_cost = spend / registrations, or 0 when registrations = 0
+first_deposit_cost = spend / first_deposits, or 0 when first_deposits = 0
+registration_to_deposit_rate_percent = first_deposits / registrations * 100, or 0 when registrations = 0
+```
+
+Totals are calculated instead of stored so imported leaf rows remain the single source of truth. This prevents drift between detail rows and summary rows, makes corrections safer, and lets SQL recalculate all dashboard totals immediately after an insert or update.
+
+### Required Unique Key
+
+```sql
+ALTER TABLE ad_daily_performance
+ADD UNIQUE KEY uq_daily_channel_report_date (
+  report_date,
+  channel_id
+);
 ```
 
 ## Endpoints
