@@ -90,6 +90,31 @@ const getChannels = async () => {
   }));
 };
 
+const getKpiCards = async (filters = {}) => {
+  const { whereClause, params } = buildDateRangeWhere(filters);
+  const [rows] = await pool.execute(
+    `
+      SELECT
+        COALESCE(SUM(dp.spend), 0) AS total_spend,
+        COALESCE(SUM(dp.registrations), 0) AS total_registrations,
+        COALESCE(SUM(dp.first_deposits), 0) AS total_deposits,
+        COUNT(DISTINCT dp.channel_id) AS total_number_of_channel
+      FROM ad_daily_performance dp
+      ${whereClause}
+    `,
+    params
+  );
+
+  const row = rows[0] || {};
+
+  return {
+    total_spend: toNumber(row.total_spend),
+    total_registrations: Number(row.total_registrations || 0),
+    total_deposits: Number(row.total_deposits || 0),
+    total_number_of_channel: Number(row.total_number_of_channel || 0)
+  };
+};
+
 const getDailyPerformance = async (filters = {}) => {
   const { whereClause, params } = buildDateRangeWhere(filters);
   const [rows] = await pool.execute(
@@ -406,6 +431,7 @@ module.exports = {
   GROUP_CODES,
   GROUP_LABELS,
   getChannels,
+  getKpiCards,
   getDailyPerformance,
   getGroupTotals,
   getGeneralTotals,

@@ -14,6 +14,12 @@ router.get(
 );
 
 router.get(
+  '/kpi-cards',
+  validateDateRange,
+  adDashboardController.getKpiCards
+);
+
+router.get(
   '/daily',
   validateDateRange,
   adDashboardController.getDailyPerformance

@@ -148,6 +148,7 @@ DB_NAME=exec_dashboard_db
 
 ```http
 GET /api/ad-dashboard/channels
+GET /api/ad-dashboard/kpi-cards?start_date=2026-05-01&end_date=2026-05-25
 GET /api/ad-dashboard/daily?start_date=2026-05-01&end_date=2026-05-25
 GET /api/ad-dashboard/totals?start_date=2026-05-01&end_date=2026-05-25
 GET /api/ad-dashboard/totals/self-run?start_date=2026-05-01&end_date=2026-05-25
@@ -190,6 +191,27 @@ Content-Type: application/json
   "spend": 43.34,
   "registrations": 0,
   "first_deposits": 0
+}
+```
+
+Fetch KPI cards:
+
+```http
+GET http://localhost:5000/api/ad-dashboard/kpi-cards?start_date=2026-05-01&end_date=2026-05-25
+```
+
+Response shape:
+
+```json
+{
+  "success": true,
+  "message": "Data fetched successfully",
+  "data": {
+    "total_spend": 0,
+    "total_registrations": 0,
+    "total_deposits": 0,
+    "total_number_of_channel": 0
+  }
 }
 ```
 

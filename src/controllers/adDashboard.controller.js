@@ -16,6 +16,15 @@ const getChannels = async (req, res, next) => {
   }
 };
 
+const getKpiCards = async (req, res, next) => {
+  try {
+    const data = await adDashboardService.getKpiCards(req.query);
+    return sendSuccess(res, 'Data fetched successfully', data);
+  } catch (error) {
+    return next(error);
+  }
+};
+
 const getDailyPerformance = async (req, res, next) => {
   try {
     const data = await adDashboardService.getDailyPerformance(req.query);
@@ -87,6 +96,7 @@ const upsertDailyPerformance = async (req, res, next) => {
 
 module.exports = {
   getChannels,
+  getKpiCards,
   getDailyPerformance,
   getTotals,
   getSelfRunTotals,

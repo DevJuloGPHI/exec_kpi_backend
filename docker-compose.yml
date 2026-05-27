@@ -1,0 +1,44 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: exec_dashboard
+      DB_PASSWORD: exec_dashboard_password
+      DB_NAME: exec_dashboard_db
+    ports:
+      - "5000:5000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: mysql:8.0
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_DATABASE: exec_dashboard_db
+      MYSQL_USER: exec_dashboard
+      MYSQL_PASSWORD: exec_dashboard_password
+      MYSQL_ROOT_PASSWORD: root_password
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/ad_dashboard_schema.sql:/docker-entrypoint-initdb.d/10-ad-dashboard-schema.sql:ro
+      - ./database/seed_daily_summary_operation.sql:/docker-entrypoint-initdb.d/20-seed-daily-summary-operation.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u$${MYSQL_USER} -p$${MYSQL_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
