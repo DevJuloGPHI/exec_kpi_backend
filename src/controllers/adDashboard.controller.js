@@ -34,6 +34,80 @@ const getDailyPerformance = async (req, res, next) => {
   }
 };
 
+const getThirdPartyAds = async (req, res, next) => {
+  try {
+    const data = await adDashboardService.getThirdPartyAds(req.query);
+    return sendSuccess(res, 'Data fetched successfully', data);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const getSelfRunAds = async (req, res, next) => {
+  try {
+    const data = await adDashboardService.getSelfRunAds(req.query);
+    return sendSuccess(res, 'Data fetched successfully', data);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const getGeneralTotalAds = async (req, res, next) => {
+  try {
+    const data = await adDashboardService.getGeneralTotalAds(req.query);
+    return sendSuccess(res, 'Data fetched successfully', data);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const getVendorCollaboration = async (req, res, next) => {
+  try {
+    const data = await adDashboardService.getVendorCollaboration();
+    return sendSuccess(res, 'Data fetched successfully', data);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const getFinancialExposure = async (req, res, next) => {
+  try {
+    const data = await adDashboardService.getFinancialExposure();
+    return sendSuccess(res, 'Data fetched successfully', data);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const getMediaPipeline = async (req, res, next) => {
+  try {
+    const data = await adDashboardService.getMediaPipeline();
+    return sendSuccess(res, 'Data fetched successfully', data);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const getMediaProfessional = async (req, res, next) => {
+  try {
+    const data = await adDashboardService.getMediaProfessional();
+    return sendSuccess(res, 'Data fetched successfully', data);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const getMediaTimeline = async (req, res, next) => {
+  try {
+    const data = await adDashboardService.getMediaTimeline(req.query);
+    return sendSuccess(res, 'Data fetched successfully', data);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const getExecutiveTimeline = getMediaTimeline;
+
 const getTotals = async (req, res, next) => {
   try {
     const data = await adDashboardService.getGroupTotals(req.query);
@@ -98,6 +172,15 @@ module.exports = {
   getChannels,
   getKpiCards,
   getDailyPerformance,
+  getSelfRunAds,
+  getThirdPartyAds,
+  getGeneralTotalAds,
+  getVendorCollaboration,
+  getFinancialExposure,
+  getMediaPipeline,
+  getMediaProfessional,
+  getMediaTimeline,
+  getExecutiveTimeline,
   getTotals,
   getSelfRunTotals,
   getThirdPartyTotals,

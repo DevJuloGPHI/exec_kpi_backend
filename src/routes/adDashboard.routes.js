@@ -26,6 +26,56 @@ router.get(
 );
 
 router.get(
+  '/self-run-ads',
+  validateDateRange,
+  adDashboardController.getSelfRunAds
+);
+
+router.get(
+  '/third-party-ads',
+  validateDateRange,
+  adDashboardController.getThirdPartyAds
+);
+
+router.get(
+  '/general-total-ads',
+  validateDateRange,
+  adDashboardController.getGeneralTotalAds
+);
+
+router.get(
+  '/vendor_collaboration',
+  adDashboardController.getVendorCollaboration
+);
+
+router.get(
+  '/financial-exposure',
+  adDashboardController.getFinancialExposure
+);
+
+router.get(
+  '/media-pipeline',
+  adDashboardController.getMediaPipeline
+);
+
+router.get(
+  '/media_professional',
+  adDashboardController.getMediaProfessional
+);
+
+router.get(
+  '/media-timeline',
+  validateDateRange,
+  adDashboardController.getMediaTimeline
+);
+
+router.get(
+  '/executive-timeline',
+  validateDateRange,
+  adDashboardController.getExecutiveTimeline
+);
+
+router.get(
   '/totals',
   validateDateRange,
   adDashboardController.getTotals

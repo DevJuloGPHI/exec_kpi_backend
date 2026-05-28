@@ -150,6 +150,15 @@ DB_NAME=exec_dashboard_db
 GET /api/ad-dashboard/channels
 GET /api/ad-dashboard/kpi-cards?start_date=2026-05-01&end_date=2026-05-25
 GET /api/ad-dashboard/daily?start_date=2026-05-01&end_date=2026-05-25
+GET /api/ad-dashboard/self-run-ads?start_date=2026-05-01&end_date=2026-05-25
+GET /api/ad-dashboard/third-party-ads?start_date=2026-05-01&end_date=2026-05-25
+GET /api/ad-dashboard/general-total-ads?start_date=2026-05-01&end_date=2026-05-25
+GET /api/ad-dashboard/vendor_collaboration
+GET /api/ad-dashboard/financial-exposure
+GET /api/ad-dashboard/media-pipeline
+GET /api/ad-dashboard/media_professional
+GET /api/ad-dashboard/media-timeline?start_date=2026-05-18&end_date=2026-05-22
+GET /api/ad-dashboard/executive-timeline?start_date=2026-05-18&end_date=2026-05-22
 GET /api/ad-dashboard/totals?start_date=2026-05-01&end_date=2026-05-25
 GET /api/ad-dashboard/totals/self-run?start_date=2026-05-01&end_date=2026-05-25
 GET /api/ad-dashboard/totals/third-party?start_date=2026-05-01&end_date=2026-05-25
@@ -202,15 +211,407 @@ GET http://localhost:5000/api/ad-dashboard/kpi-cards?start_date=2026-05-01&end_d
 
 Response shape:
 
+Breakdown arrays include every active ad channel. Channels without daily performance rows in the selected date range are returned with zero metrics.
+
 ```json
 {
   "success": true,
   "message": "Data fetched successfully",
   "data": {
+    "total_spend": 23839.68,
+    "total_registrations": 142,
+    "total_deposits": 5,
+    "total_number_of_channel": 17,
+    "breakdown": {
+      "total_spend": [
+        {
+          "channel_id": 1,
+          "channel_code": "RICHADS",
+          "channel_name": "Richads",
+          "group_code": "SELF_RUN",
+          "group_name": "Self-run Ads",
+          "spend": 2540.68,
+          "percentage_of_total": 10.66
+        }
+      ],
+      "total_registrations": [
+        {
+          "channel_id": 1,
+          "channel_code": "RICHADS",
+          "channel_name": "Richads",
+          "group_code": "SELF_RUN",
+          "group_name": "Self-run Ads",
+          "registrations": 46,
+          "percentage_of_total": 32.39
+        }
+      ],
+      "total_deposits": [
+        {
+          "channel_id": 1,
+          "channel_code": "RICHADS",
+          "channel_name": "Richads",
+          "group_code": "SELF_RUN",
+          "group_name": "Self-run Ads",
+          "first_deposits": 0,
+          "percentage_of_total": 0
+        }
+      ],
+      "total_number_of_channel": [
+        {
+          "channel_id": 1,
+          "channel_code": "RICHADS",
+          "channel_name": "Richads",
+          "group_code": "SELF_RUN",
+          "group_name": "Self-run Ads",
+          "channel_count": 1,
+          "spend": 2540.68,
+          "registrations": 46,
+          "first_deposits": 0,
+          "percentage_of_total": 5.88
+        }
+      ]
+    }
+  }
+}
+```
+
+Fetch self-run ads aggregate:
+
+```http
+GET http://localhost:5000/api/ad-dashboard/self-run-ads?start_date=2026-05-01&end_date=2026-05-25
+```
+
+Response shape:
+
+```json
+{
+  "success": true,
+  "message": "Data fetched successfully",
+  "data": [
+    {
+      "group_name": "Self-run Ads",
+      "total_spend": 0,
+      "total_registrations": 0,
+      "total_first_deposits": 0,
+      "cpr": 0,
+      "cpd": 0,
+      "conversion_rate": 0
+    }
+  ]
+}
+```
+
+Fetch third-party ads aggregate:
+
+```http
+GET http://localhost:5000/api/ad-dashboard/third-party-ads?start_date=2026-05-01&end_date=2026-05-25
+```
+
+Response shape:
+
+```json
+{
+  "success": true,
+  "message": "Data fetched successfully",
+  "data": [
+    {
+      "group_name": "Third Party Ads",
+      "total_spend": 0,
+      "total_registrations": 0,
+      "total_first_deposits": 0,
+      "cpr": 0,
+      "cpd": 0,
+      "conversion_rate": 0
+    }
+  ]
+}
+```
+
+Fetch general total ads aggregate:
+
+```http
+GET http://localhost:5000/api/ad-dashboard/general-total-ads?start_date=2026-05-01&end_date=2026-05-25
+```
+
+Response shape:
+
+```json
+{
+  "success": true,
+  "message": "Data fetched successfully",
+  "data": {
+    "total_type": "General Total",
     "total_spend": 0,
     "total_registrations": 0,
-    "total_deposits": 0,
-    "total_number_of_channel": 0
+    "total_first_deposits": 0,
+    "cpr": 0,
+    "cpd": 0,
+    "conversion_rate": 0
+  }
+}
+```
+
+Fetch vendor collaboration campaigns:
+
+```http
+GET http://localhost:5000/api/ad-dashboard/vendor_collaboration
+```
+
+Response shape:
+
+```json
+{
+  "success": true,
+  "message": "Data fetched successfully",
+  "data": [
+    {
+      "vendor_name": "Example Vendor",
+      "website_url": "https://example.com",
+      "assignee_name": "Marketing Owner",
+      "status_name": "Active",
+      "campaign_name": "Example Campaign",
+      "total_amount_raw": "PHP 100,000",
+      "amount_value": 100000,
+      "currency_code": "PHP",
+      "start_date": "2026-05-01",
+      "end_date": "2026-05-31",
+      "days_remaining": 4,
+      "campaign_health": "Ending Soon"
+    }
+  ]
+}
+```
+
+Fetch financial exposure by vendor:
+
+```http
+GET http://localhost:5000/api/ad-dashboard/financial-exposure
+```
+
+Vendor spend is read from `ad_vendor_campaigns`; USD conversion rates are read from `ad_currency_fx_rates`.
+
+Response shape:
+
+```json
+{
+  "success": true,
+  "message": "Data fetched successfully",
+  "data": {
+    "title": "Financial Exposure: Where is our money going?",
+    "subtitle": "Top vendors by total spend converted to USD (mock FX rates).",
+    "currency_code": "USD",
+    "fx_rates_to_usd": {
+      "USD": 1,
+      "USDT": 1,
+      "EUR": 1.08,
+      "PHP": 0.017857142857142856
+    },
+    "vendors": [
+      {
+        "vendor_name": "Example Vendor",
+        "website_url": "https://example.com",
+        "total_spend_usd": 25000,
+        "original_amounts": "USD 25,000.00",
+        "currency_codes": "USD",
+        "status_names": "Activated",
+        "campaign_count": 1,
+        "latest_start_date": "2026-05-01",
+        "latest_end_date": "2026-07-31",
+        "days_remaining": 65,
+        "status": "Active",
+        "campaign_health": "Active"
+      }
+    ]
+  }
+}
+```
+
+Fetch media pipeline health:
+
+```http
+GET http://localhost:5000/api/ad-dashboard/media-pipeline
+```
+
+Pipeline stages are read from `ad_partnerships` and `ad_partnership_statuses`. Active partnerships that started within the onboarding window are grouped as onboarding. The response includes every partnership status code in `status_breakdown`, including statuses with zero partnerships.
+
+Response shape:
+
+```json
+{
+  "success": true,
+  "message": "Data fetched successfully",
+  "data": {
+    "title": "Pipeline Health: Are we launching campaigns fast enough?",
+    "subtitle": "Vendor count by operational stage from negotiation through activation.",
+    "as_of_date": "2026-05-28",
+    "onboarding_window_days": 14,
+    "total_vendor_count": 14,
+    "total_partnership_count": 14,
+    "stages": [
+      {
+        "stage_code": "NEGOTIATION",
+        "stage_name": "Negotiation",
+        "sort_order": 1,
+        "color_hex": "#A3A3AD",
+        "status_codes": [
+          "NEGOTIATION",
+          "NEGOTIATING",
+          "CONTRACT_SENT_TO_LEGAL",
+          "PENDING"
+        ],
+        "vendor_count": 2,
+        "partnership_count": 2,
+        "vendors": [
+          {
+            "partnership_id": 17,
+            "platform_id": 17,
+            "platform_name": "AFILI.pH",
+            "website_url": "https://example.com",
+            "platform_type": "Media",
+            "partnership_name": "AFILI.pH Advertising Partnership - 2026",
+            "partnership_status": "Negotiation",
+            "status_code": "NEGOTIATION",
+            "start_date": null,
+            "end_date": null,
+            "renewal_date": null,
+            "person_in_charge": "Marketing Owner"
+          }
+        ]
+      }
+    ],
+    "other_stages": {
+      "stage_code": "OTHER",
+      "stage_name": "Other",
+      "sort_order": 5,
+      "color_hex": "#6B7280",
+      "status_codes": [
+        "DISAPPROVED",
+        "EXPIRED",
+        "PENDING_RENEWAL",
+        "SUSPENDED"
+      ],
+      "vendor_count": 1,
+      "partnership_count": 1,
+      "vendors": []
+    },
+    "status_breakdown": [
+      {
+        "status_code": "ACTIVE",
+        "status_name": "Active",
+        "vendor_count": 8,
+        "partnership_count": 8,
+        "pipeline_stage_codes": [
+          "ONBOARDING",
+          "ACTIVATED"
+        ],
+        "pipeline_stage_names": [
+          "Onboarding",
+          "Activated"
+        ]
+      }
+    ],
+    "note": "Pipeline is spread across stages - monitor onboarding and payment queues for slippage."
+  }
+}
+```
+
+Fetch media professional partnerships:
+
+```http
+GET http://localhost:5000/api/ad-dashboard/media_professional
+```
+
+Response shape:
+
+```json
+{
+  "success": true,
+  "message": "Data fetched successfully",
+  "data": [
+    {
+      "partner_platform": "Example Platform",
+      "platform_type": "Media",
+      "website_app": "https://example.com",
+      "partnership_status": "Active",
+      "partnership_name": "Example Partnership",
+      "partnership_start_date": "2026-05-01",
+      "partnership_end_date": "2026-08-01",
+      "renewal_date": "2026-07-15",
+      "person_in_charge": "Marketing Owner",
+      "total_cost": 100000,
+      "ad_placements": "Homepage Banner, Sidebar",
+      "tracking_codes": "EXAMPLE001",
+      "promotion_link": "https://example.com/promo",
+      "remarks": "Contract signed | Renewal reminder",
+      "payment_status": "Paid",
+      "impressions": 10000,
+      "clicks": 250,
+      "registrations": 20,
+      "first_deposits": 5,
+      "spend": 100000,
+      "revenue": 125000,
+      "ctr": 2.5,
+      "roi": 25,
+      "partnership_health": "Healthy"
+    }
+  ]
+}
+```
+
+Fetch executive timeline:
+
+```http
+GET http://localhost:5000/api/ad-dashboard/executive-timeline?start_date=2026-05-18&end_date=2026-05-22
+```
+
+`/api/ad-dashboard/media-timeline` is also available for the same response.
+
+If no dates are provided, the endpoint uses the current Monday-to-Friday work week.
+
+Response shape:
+
+```json
+{
+  "success": true,
+  "message": "Data fetched successfully",
+  "data": {
+    "title": "Executive Timeline: What is happening this week?",
+    "subtitle": "May 2026 action items from remarks, contract dates, and payment milestones.",
+    "window": {
+      "start_date": "2026-05-18",
+      "end_date": "2026-05-22",
+      "label": "May 18-22, 2026"
+    },
+    "alert": {
+      "severity": "warning",
+      "message": "Critical executive action window: May 18-22, 2026"
+    },
+    "total_action_items": 0,
+    "days": [
+      {
+        "date": "2026-05-18",
+        "date_label": "May 18th, 2026",
+        "critical_label": "Critical week",
+        "item_count": 1,
+        "items": [
+          {
+            "id": "note:1",
+            "date": "2026-05-18",
+            "source": "remark",
+            "event_type": "issue",
+            "platform_name": "Example Platform",
+            "partnership_name": "Example Partnership",
+            "partnership_status": "Active",
+            "person_in_charge": "Marketing Owner",
+            "title": "Example Platform - Issue follow-up",
+            "description": "Action item details from remarks.",
+            "amount": null,
+            "currency_code": null,
+            "badge": "This week"
+          }
+        ]
+      }
+    ]
   }
 }
 ```
